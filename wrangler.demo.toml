@@ -1,0 +1,14 @@
+name = "adventure-demo"
+main = "src/demo.js"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+[assets]
+directory = "./public-demo"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "adventure"
+database_id = "REPLACE_WITH_D1_ID"

@@ -1,0 +1,50 @@
+// Cloudflare Access JWT 驗證（RS256）。依官方「Validate JWTs」：
+// 從 https://<team>.cloudflareaccess.com/cdn-cgi/access/certs 取公鑰，驗簽章、aud、iss、exp。
+const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+let jwksCache = { at: 0, keys: null };
+
+async function getKeys(team) {
+  if (jwksCache.keys && Date.now() - jwksCache.at < 3600e3) return jwksCache.keys;
+  const r = await fetch(`https://${team}/cdn-cgi/access/certs`);
+  if (!r.ok) throw new Error('jwks');
+  jwksCache = { at: Date.now(), keys: (await r.json()).keys };
+  return jwksCache.keys;
+}
+
+export async function verifyAccessJwt(token, env) {
+  const [h, p, s] = token.split('.');
+  if (!h || !p || !s) throw new Error('format');
+  const head = JSON.parse(new TextDecoder().decode(b64u(h)));
+  const pay = JSON.parse(new TextDecoder().decode(b64u(p)));
+  if (head.alg !== 'RS256') throw new Error('alg');
+  const keys = await getKeys(env.ACCESS_TEAM_DOMAIN);
+  const jwk = keys.find((k) => k.kid === head.kid);
+  if (!jwk) throw new Error('kid');
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(s), new TextEncoder().encode(h + '.' + p));
+  if (!ok) throw new Error('sig');
+  const aud = Array.isArray(pay.aud) ? pay.aud : [pay.aud];
+  if (!aud.includes(env.ACCESS_AUD)) throw new Error('aud');
+  if (pay.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) throw new Error('iss');
+  if (!pay.exp || pay.exp * 1000 < Date.now()) throw new Error('exp');
+  return pay;
+}
+
+const list = (s) => String(s || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+
+// 回傳 {email, role:'editor'|'viewer'} 或 null（未通過）。
+export async function authenticate(request, env) {
+  let email;
+  if (!env.ACCESS_TEAM_DOMAIN) {
+    // 只有本機開發（.dev.vars 設了 DEV_AUTH_EMAIL、且沒設 ACCESS_TEAM_DOMAIN）才略過 Access
+    if (!env.DEV_AUTH_EMAIL) return null;
+    email = (request.headers.get('x-dev-email') || env.DEV_AUTH_EMAIL).toLowerCase();
+  } else {
+    const tok = request.headers.get('Cf-Access-Jwt-Assertion');
+    if (!tok) return null;
+    try { const pay = await verifyAccessJwt(tok, env); email = String(pay.email || '').toLowerCase() } catch { return null }
+  }
+  if (list(env.EDITOR_EMAILS).includes(email)) return { email, role: 'editor' };
+  if (list(env.VIEWER_EMAILS).includes(email)) return { email, role: 'viewer' };
+  return null;
+}

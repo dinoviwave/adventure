@@ -1,0 +1,878 @@
+<title>雙半馬冒險路線</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* 版面：單欄手機優先。上方 HUD，中間冒險路線圖（兩列蛇形路徑），下方是點選節點後切換的詳情面板。
+   風格：原創的校園運動會像素風；白天球場配色，深色主題是傍晚練習。 */
+:root{
+  --bg:#bfe3f5; --panel:#f8fbff; --panel2:#dcecf8; --ink:#13203d; --muted:#46567a;
+  --line:#13203d; --sky:#9fd6f2; --grass:#62c254; --grass2:#52ad46; --track:#d8572a;
+  --gold:#f4b400; --ok:#5ed16a; --warn:#ffa94d; --plan:#a9cdfa; --lock:#ff8f8f; --on-fill:#13203d;
+  --font-display:'Press Start 2P','DotGothic16','Noto Sans TC',monospace;
+  --font-body:'DotGothic16','Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1730; --panel:#14284a; --panel2:#1d3764; --ink:#e9f2ff; --muted:#9db3d6;
+    --line:#030a18; --sky:#16305e; --grass:#2f7d3d; --grass2:#286b34; --track:#c4572f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1730; --panel:#14284a; --panel2:#1d3764; --ink:#e9f2ff; --muted:#9db3d6;
+  --line:#030a18; --sky:#16305e; --grass:#2f7d3d; --grass2:#286b34; --track:#c4572f;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3,p,ul{margin:0}
+ul{padding:0;list-style:none}
+button,input,select,textarea{font:inherit;color:inherit}
+.box{background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:14px}
+
+header .kicker{font-family:var(--font-display);font-size:9px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+header h1{font-family:var(--font-display);font-size:clamp(17px,5.4vw,26px);line-height:1.35;margin-top:8px;text-wrap:balance}
+header p{margin-top:8px;color:var(--muted);font-size:14px}
+
+.hud{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (min-width:560px){.hud{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--panel);border:3px solid var(--line);box-shadow:3px 3px 0 var(--line);padding:10px;min-width:0}
+.tile .lab{font-size:12px;color:var(--muted)}
+.tile .val{font-family:var(--font-display);font-size:16px;margin-top:6px;line-height:1.3;overflow-wrap:anywhere}
+.tile .sub{font-size:12px;color:var(--muted);margin-top:4px}
+.bar{height:10px;border:2px solid var(--line);background:var(--panel2);margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ok)}
+
+.mapbox{padding:0;overflow:hidden}
+.mapbox svg{display:block;width:100%;height:auto}
+.m-sky{fill:var(--sky)} .m-grass{fill:var(--grass)} .m-grass2{fill:var(--grass2)}
+.m-track{stroke:var(--track)} .m-lane{stroke:#fff;opacity:.85}
+.m-trunk{fill:#7a4a2a} .m-leaf{fill:var(--grass2)} .m-leaf2{fill:#2f7d3d}
+.node{cursor:pointer;outline:none}
+.node .nb{stroke:var(--line);stroke-width:3}
+.node.ok .nb{fill:var(--ok)} .node.warn .nb{fill:var(--warn)} .node.planned .nb{fill:var(--plan)}
+.node.unplanned .nb{fill:var(--panel2);stroke-dasharray:5 3}
+.node.lockd .nb{fill:var(--lock)} .node.boss .nb{fill:var(--gold)}
+.node text{fill:var(--on-fill);text-anchor:middle}
+.node.unplanned text{fill:var(--ink)}
+.nt{font:10px var(--font-body)} .nn{font:8px var(--font-display)}
+.cap{font:11px var(--font-body);fill:var(--ink);text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:3px;stroke-linejoin:round}
+.selring{fill:none;stroke:var(--ink);stroke-width:3;stroke-dasharray:4 3;display:none}
+.node.sel .selring{display:block}
+.node:focus-visible .selring{display:block;stroke:var(--gold)}
+.ink{fill:var(--on-fill)!important}
+/* 身體訊號 */
+.body h2{font-family:var(--font-display);font-size:13px;margin-bottom:8px}
+.body .stt{display:inline-block;font-size:12px;padding:0 6px;border:2px solid var(--line);margin-left:6px;vertical-align:middle;background:var(--panel2);color:var(--ink)}
+.body .stt.ok{background:#62c254;color:#0b2b10}.body .stt.near{background:#f2c230;color:#3a2a00}.body .stt.out{background:#e0794f;color:#3a1204}.body .stt.missing{background:var(--panel2);border-style:dashed}
+.mrow{display:grid;grid-template-columns:4.5em 1fr;gap:4px 10px;align-items:center;margin-top:10px}
+.mrow .ml{font-size:12px;color:var(--muted)}
+.mrow .mv{font-family:var(--font-display);font-size:16px}
+.nv{text-shadow:2px 0 0 var(--line),-2px 0 0 var(--line),0 2px 0 var(--line),0 -2px 0 var(--line),2px 2px 0 var(--line),-2px -2px 0 var(--line),2px -2px 0 var(--line),-2px 2px 0 var(--line)}
+.nv.n-ok{color:#4cc23f}.nv.n-out{color:#ee3b3b}.nv.n-near{color:#f2c230}.nv.n-missing{color:#fff}
+.mrow .mv small{font-family:var(--font-body);font-size:12px;color:var(--muted);margin-left:6px}
+.mt{position:relative;height:12px;border:2px solid var(--line);grid-column:2;background:var(--panel2)}
+.mt .val{position:absolute;top:-5px;width:4px;height:18px;background:var(--ink);border:1px solid var(--panel);transform:translateX(-2px)}
+.mt .lim{position:absolute;top:-2px;bottom:-2px;width:0;border-left:2px dashed var(--ink)}
+.spark{display:flex;align-items:flex-end;gap:4px;height:34px;grid-column:2}
+.spark i{flex:1;min-width:0;border:2px solid var(--line);background:#62c254;display:block}
+.spark i.bad{background:#e0794f}.spark i.none{background:transparent;border-style:dashed;height:6px!important}
+.spark.lb{height:auto;font-size:10px;color:var(--muted);align-items:flex-start;margin-top:-2px}.spark.lb span{flex:1;text-align:center}
+.bmsg{margin-top:12px;padding:8px 10px;border:2px dashed var(--line);font-size:13px;line-height:1.6;background:var(--panel2)}
+details.rg{margin-top:10px;font-size:13px;color:var(--muted)}details.rg summary{cursor:pointer;color:var(--ink);min-height:32px}
+.rgf{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}.rgf label{display:flex;flex-direction:column;font-size:12px;gap:2px}
+.rgf input{width:7em;padding:6px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-size:16px}
+.shotbox h2{font-family:var(--font-display);font-size:13px;margin-bottom:8px}
+.shotnote{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 10px}
+.shotbtns{display:flex;gap:10px;flex-wrap:wrap}
+.shotout{margin-top:12px}
+.shotout img{display:block;width:100%;max-width:270px;height:auto;border:3px solid var(--line);image-rendering:pixelated}
+/* 課表說明 */
+.dlink{all:unset;cursor:pointer;color:var(--ink);text-decoration:underline dotted;text-underline-offset:3px;min-height:24px}
+.dlink:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.dlink .car{display:inline-block;width:1em;color:var(--muted)}
+.desc{margin-top:8px;padding:8px 10px;background:var(--panel2);border:2px solid var(--line);font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+@keyframes sweat{0%{transform:translateY(0);opacity:1}75%{transform:translateY(8px);opacity:1}100%{transform:translateY(12px);opacity:0}}
+.sdrop{animation:sweat .9s steps(5,end) infinite}
+@keyframes rf4{0%{opacity:1}25%,100%{opacity:0}}
+@keyframes rf2{0%{opacity:1}50%,100%{opacity:0}}
+.rf{opacity:0}
+@media (prefers-reduced-motion:reduce){.sdrop{animation:none!important}.rf{animation:none!important;opacity:0!important}.rf[data-s]{opacity:1!important}}}
+@keyframes bob{50%{transform:translateY(-2px)}}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 14px 12px;font-size:12px;color:var(--muted);border-top:3px solid var(--line);background:var(--panel)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border:2px solid var(--line);display:inline-block}
+.sw.ok{background:var(--ok)} .sw.warn{background:var(--warn)} .sw.planned{background:var(--plan)} .sw.un{background:var(--panel2);border-style:dashed} .sw.lockd{background:var(--lock)} .sw.boss{background:var(--gold)}
+
+#panel h2{font-family:var(--font-display);font-size:13px;line-height:1.6;text-wrap:balance}
+.tag{display:inline-block;font-family:var(--font-body);font-size:12px;padding:0 6px;border:2px solid var(--line);background:var(--gold);color:var(--on-fill);margin-left:6px;vertical-align:middle}
+.tag.alt{background:var(--panel2);color:var(--ink)}
+.meta{color:var(--muted);font-size:13px;margin-top:4px}
+.empty{margin-top:12px;padding:12px;border:3px dashed var(--line);color:var(--muted);font-size:14px}
+.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.row{display:flex;gap:10px;align-items:center;border:2px solid var(--line);background:var(--panel2);padding:8px 10px;min-width:0}
+.row.is-done .rt{text-decoration:line-through;color:var(--muted)}
+.rmain{flex:1;min-width:0}
+.rt{overflow-wrap:anywhere}
+.rm{font-size:12px;color:var(--muted)}
+.chk{flex:none;width:28px;height:28px;border:3px solid var(--line);background:var(--panel);cursor:pointer;padding:0;position:relative}
+.chk[aria-pressed="true"]{background:var(--ok)}
+.chk[aria-pressed="true"]::after{content:"";position:absolute;left:6px;top:2px;width:7px;height:13px;border:solid var(--on-fill);border-width:0 3px 3px 0;transform:rotate(40deg)}
+.chk:disabled{opacity:.5;cursor:default}
+.mini{flex:none;font-size:12px;border:2px solid var(--line);background:var(--panel);padding:2px 8px;cursor:pointer;min-height:28px}
+.mini:disabled{opacity:.5;cursor:default}
+.mini.warn{background:var(--lock);color:var(--on-fill)}
+.key{color:var(--track);font-family:var(--font-display);font-size:10px;margin-right:4px}
+.req{font-size:11px;border:2px solid var(--line);padding:0 5px;background:var(--lock);color:var(--on-fill);margin-right:6px}
+.req.sug{background:var(--plan)}
+.btn{border:3px solid var(--line);background:var(--gold);color:var(--on-fill);padding:8px 14px;cursor:pointer;box-shadow:3px 3px 0 var(--line);min-height:44px}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+.btn.ghost{background:var(--panel)}
+.btn:disabled{opacity:.5;cursor:default}
+form.add{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
+form.add label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+form.add .full{grid-column:1/-1}
+input[type=text],input[type=date],select,textarea{width:100%;min-width:0;border:3px solid var(--line);background:var(--panel);padding:8px;min-height:44px;color:var(--ink)}
+form.add .inline{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px}
+form.add .inline input{width:20px;height:20px;min-height:0;accent-color:var(--track)}
+.fld{display:flex;flex-direction:column;gap:4px;margin-top:12px;font-size:12px;color:var(--muted)}
+.pace{font-family:var(--font-display);font-size:11px;color:var(--ink);margin-top:2px}
+.nudge{border:3px dashed var(--line);padding:12px;background:var(--panel);font-size:14px}
+.note{border:3px solid var(--line);background:var(--lock);color:var(--on-fill);padding:8px 12px;font-size:13px}
+.note[hidden]{display:none}
+details.rules{font-size:13px;color:var(--muted)}
+details.rules summary{cursor:pointer;color:var(--ink);min-height:32px}
+details.rules p{margin-top:6px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border:3px solid var(--line);z-index:20;max-width:calc(100% - 32px);font-size:14px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">Year-end Double Half</div>
+    <h1>雙半馬冒險路線</h1>
+    <p>南山人壽半馬 11/22　台北馬拉松半馬 12/20。每週課表做完才排下一週，未排的週不算缺漏。</p>
+  </header>
+
+  <div id="note" class="note" hidden></div>
+  <section class="hud" id="hud" aria-label="目前狀態"></section>
+
+  <section class="box body" id="body" aria-label="身體訊號"></section>
+
+  <section class="box mapbox" aria-label="冒險路線圖">
+    <div id="map"></div>
+    <div class="legend">
+      <span><i class="sw ok"></i>完成率達 80%</span>
+      <span><i class="sw warn"></i>未達 80%</span>
+      <span><i class="sw planned"></i>已排、進行中</span>
+      <span><i class="sw un"></i>未規劃</span>
+      <span><i class="sw lockd"></i>鑰匙未齊</span>
+      <span><i class="sw boss"></i>比賽關卡</span>
+    </div>
+  </section>
+
+  <section class="box" id="panel" aria-live="polite"></section>
+
+  <section class="box shotbox" id="shotbox" aria-label="今日圖卡">
+    <h2>今日圖卡</h2>
+    <p class="shotnote">把今天的課表、備賽進度與身體訊號做成一張直式圖片，可以存到手機相簿。身體訊號只用顏色表示，不含數字。</p>
+    <div class="shotbtns"><button class="btn" type="button" id="shotGen">產生圖片</button><button class="btn ghost" type="button" id="shotSave" hidden>儲存圖片</button></div>
+    <div id="shotOut" class="shotout" hidden><img id="shotImg" alt="今天做了什麼的圖卡" width="360" height="640"><p class="shotnote" id="shotHint">手機上：長按圖片，選「加入照片」或「儲存圖片」。</p></div>
+  </section>
+
+  <form class="box add" id="addForm" hidden>
+    <h3 class="full" style="font-family:var(--font-display);font-size:12px">新增課表</h3>
+    <label>日期<input type="date" id="f-date" required></label>
+    <label>類型
+      <select id="f-kind">
+        <option>跑</option><option>騎</option><option>游</option><option>肌力</option><option>休息</option><option>其他</option>
+      </select>
+    </label>
+    <label class="full">課表名稱<input type="text" id="f-title" maxlength="80" placeholder="例如 Z2 有氧 60 分鐘" required></label>
+    <label class="inline full"><input type="checkbox" id="f-key">標為關鍵課表</label>
+    <div class="full"><button class="btn" type="submit">加入這週</button></div>
+  </form>
+
+  <section id="nudge" class="nudge" hidden></section>
+
+  <details class="rules box">
+    <summary>計算方式與資料說明</summary>
+    <p>準備度等於「到期課表的完成數」除以「到期課表數」，休息日不計。到期指日期不晚於今天。</p>
+    <p>連續週數：從最近一個已結束的週往前數，完成率達 80% 的週連續幾週。沒有規劃課表的週不計入，也不會中斷連續。80% 是暫定門檻。</p>
+    <p>必備項全部確認，鑰匙才齊，關卡才能開啟；建議項只提醒。課表是準備度，不擋人。</p>
+    <p>比賽日期與地點依媒體報導整理，起跑時間與賽道路線尚未確認。半馬距離以 21.0975 公里計算配速。</p>
+  </details>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var START='2026-11-02', NWEEKS=7, DIST=21.0975;
+var RACES=[
+  {id:'nanshan',name:'南山人壽半馬',short:'南山',date:'2026-11-22',place:'總統府前'},
+  {id:'taipei',name:'台北馬拉松 半馬',short:'台北',date:'2026-12-20',place:'台北市政府前廣場'}
+];
+var ITEMS=[
+  {k:'reg',label:'報名與繳費確認',req:true},
+  {k:'pack',label:'領物與集合時間確認',req:true},
+  {k:'gear',label:'裝備：鞋、手錶、號碼布、補給',req:true},
+  {k:'trip',label:'交通與住宿',req:true},
+  {k:'fuel',label:'補給與配速演練',req:false},
+  {k:'sleep',label:'賽前一晚睡眠與行李檢查',req:false}
+];
+var WEEKNOTE={2:'南山賽週',3:'賽後恢復',6:'台北賽週'};
+var WD=['日','一','二','三','四','五','六'];
+
+var db=null, canWrite=true, loaded=false;
+var workouts=[], checks={}, customItems=[], cfg={}, wellness=[], ranges={rhrMax:56,hrvMin:43};
+var sel=null, pendingRender=false, confirmDel=null, openDesc={}, chain=Promise.resolve();
+var $=function(id){return document.getElementById(id)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+
+function pad(n){return String(n).padStart(2,'0')}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parse(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2],12)}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d)}
+function diff(a,b){return Math.round((parse(b)-parse(a))/86400000)}
+function today(){return ymd(new Date())}
+function md(s){var d=parse(s);return (d.getMonth()+1)+'/'+d.getDate()}
+function wk(s){return WD[parse(s).getDay()]}
+function curIdx(){var i=Math.floor(diff(START,today())/7);return Math.max(0,Math.min(NWEEKS-1,i))}
+function wStart(i){return addDays(START,i*7)}
+function wEnd(i){return addDays(START,i*7+6)}
+function race(id){return RACES.filter(function(r){return r.id===id})[0]}
+
+function weekStat(i){
+  var ws=wStart(i), we=wEnd(i);
+  var all=workouts.filter(function(w){return w.date>=ws&&w.date<=we});
+  var items=all.filter(function(w){return !w.unplanned});
+  var extra=all.filter(function(w){return w.unplanned});
+  var train=items.filter(function(w){return w.kind!=='休息'});
+  var done=train.filter(function(w){return w.done}).length;
+  return {ws:ws,we:we,items:items,extra:extra,total:train.length,done:done};
+}
+function weekClass(i){
+  var s=weekStat(i);
+  if(s.total===0) return s.items.length?'planned':'unplanned';
+  var rate=s.done/s.total, past=s.we<today();
+  if(past) return rate>=0.8?'ok':'warn';
+  return rate===1?'ok':'planned';
+}
+function itemsFor(r){
+  var base=ITEMS.map(function(x){return {key:x.k,label:x.label,req:x.req,custom:false}});
+  var cu=customItems.filter(function(c){return c.race===r}).map(function(c){return {key:c.id,label:c.label,req:!!c.required,custom:true}});
+  return base.concat(cu);
+}
+function isDone(r,k){var c=checks[r+'__'+k];return !!(c&&c.done)}
+function gate(r){
+  var its=itemsFor(r).filter(function(x){return x.req});
+  var d=its.filter(function(x){return isDone(r,x.key)}).length;
+  return {done:d,total:its.length,open:d===its.length};
+}
+function prep(){
+  var t=today();
+  var due=workouts.filter(function(w){return !w.unplanned&&w.kind!=='休息'&&w.date<=t});
+  var done=due.filter(function(w){return w.done}).length;
+  var keys=due.filter(function(w){return w.key});
+  var kd=keys.filter(function(w){return w.done}).length;
+  var planned=0,i;
+  for(i=0;i<NWEEKS;i++){if(weekStat(i).items.length) planned++}
+  var c=curIdx(), last=(wEnd(c)<t)?c:c-1, streak=0;
+  for(i=last;i>=0;i--){
+    var s=weekStat(i);
+    if(s.total===0) continue;
+    if(s.done/s.total>=0.8) streak++; else break;
+  }
+  return {due:due.length,done:done,keys:keys.length,kd:kd,planned:planned,streak:streak};
+}
+function nextRace(){
+  var t=today();
+  return RACES.filter(function(r){return r.date>=t})[0]||null;
+}
+function parseTime(s){
+  s=String(s||'').trim(); if(!s) return null;
+  var p=s.split(':').map(Number);
+  if(p.some(function(x){return isNaN(x)||x<0})) return NaN;
+  if(p.length===3) return p[0]*3600+p[1]*60+p[2];
+  if(p.length===2) return p[0]*3600+p[1]*60;
+  return NaN;
+}
+function paceStr(sec){
+  var per=sec/DIST, m=Math.floor(per/60), s=Math.round(per-m*60);
+  if(s===60){m++;s=0}
+  return m+':'+pad(s)+' /公里';
+}
+
+/* ---------- 地圖 ---------- */
+var ACT={"p":["46404a","221c20","120e12","fad6b0","eebc8e","ce966c","aaecf0","24a8b0","146e7c","96463c","d8ea60","a0b838","6c8028","1e1e26","a06c4e","acb2bc","be8660","4652aa","283078","1a1e54","d6a076","c8d0e2","a4acc4","828aa6","aa92ec","ffffff","ecf0f8","b8c0d4","f6fcb0","8c70d8","624cac","bee2f6","6eb8e6","3480cc","1e54a0"],"a":{"run":{"w":24,"h":31,"f":[[[1,7,10,0],[2,7,2,1],[2,9,1,0],[2,10,3,1],[2,13,1,0],[2,14,3,1],[3,5,3,0],[3,8,9,1],[4,5,1,0],[4,6,1,1],[4,7,1,0],[4,8,9,2],[5,5,1,1],[5,6,1,0],[5,7,1,1],[5,15,2,0],[5,17,1,1],[5,18,1,0],[5,19,2,1],[5,21,2,2],[6,5,1,1],[6,6,1,2],[6,7,3,3],[6,10,4,4],[6,14,4,5],[7,5,1,2],[7,6,1,1],[7,7,3,3],[7,10,9,6],[8,5,2,2],[8,7,4,6],[8,11,8,7],[9,7,2,3],[9,9,1,4],[9,10,9,8],[9,19,1,5],[10,7,3,3],[10,10,4,4],[10,14,4,5],[10,18,1,3],[10,19,1,5],[11,7,4,3],[11,11,4,4],[11,15,1,5],[11,16,1,4],[11,17,1,5],[12,7,1,3],[12,8,1,4],[12,9,1,3],[12,10,4,4],[12,14,1,5],[12,15,1,4],[12,16,2,9],[13,7,2,3],[13,9,1,4],[13,10,1,3],[13,11,2,4],[13,13,5,5],[14,11,1,10],[14,12,2,3],[14,14,1,4],[14,15,1,3],[14,16,2,11],[14,18,1,12],[15,10,2,10],[15,12,1,5],[15,13,2,4],[15,15,1,5],[15,16,2,11],[16,8,1,13],[16,9,1,4],[16,10,2,10],[16,12,3,4],[16,15,1,11],[16,16,1,12],[16,17,1,11],[16,18,1,14],[17,8,5,4],[17,13,3,15],[17,16,1,11],[17,17,1,16],[18,8,5,4],[18,13,1,11],[18,14,1,12],[18,15,1,11],[18,16,1,12],[18,17,1,16],[18,18,1,14],[19,8,1,10],[19,9,3,4],[19,12,3,11],[19,15,1,12],[19,16,1,16],[20,8,2,11],[20,10,1,4],[20,11,1,11],[20,12,1,12],[20,13,1,11],[20,14,2,12],[21,7,2,17],[21,9,1,18],[21,10,1,3],[21,11,3,4],[21,14,1,18],[22,7,1,17],[22,8,1,18],[22,9,1,17],[22,10,5,4],[23,7,1,18],[23,8,1,17],[23,9,1,18],[23,10,1,3],[23,11,5,4],[24,6,1,14],[24,7,1,18],[24,8,1,19],[24,9,1,18],[24,10,1,19],[24,11,1,4],[24,12,1,5],[24,13,3,4],[25,6,4,16],[25,10,1,20],[25,11,1,16],[25,12,4,4],[26,5,1,21],[26,6,1,22],[26,7,1,21],[26,8,2,22],[26,10,1,14],[26,14,1,5],[26,15,2,4],[27,5,2,22],[27,7,1,23],[27,8,1,22],[27,9,1,23],[27,14,3,4],[28,5,5,24],[28,14,2,25],[28,16,3,26],[29,14,3,26],[29,17,2,27],[30,14,5,24]],[[1,7,10,0],[2,7,2,1],[2,9,1,0],[2,10,3,1],[2,13,1,0],[2,14,3,1],[3,5,3,0],[3,8,9,1],[4,5,1,0],[4,6,1,1],[4,7,1,0],[4,8,9,2],[5,5,1,1],[5,6,1,0],[5,7,1,1],[5,15,2,0],[5,17,1,1],[5,18,1,0],[5,19,2,1],[5,21,2,2],[6,5,1,1],[6,6,1,2],[6,7,3,3],[6,10,4,4],[6,14,4,5],[7,5,1,2],[7,6,1,1],[7,7,3,3],[7,10,9,6],[8,5,2,2],[8,7,4,6],[8,11,8,7],[9,7,2,3],[9,9,1,4],[9,10,9,8],[9,19,1,5],[10,7,3,3],[10,10,4,4],[10,14,4,5],[10,18,1,3],[10,19,1,5],[11,7,4,3],[11,11,4,4],[11,15,1,5],[11,16,1,4],[11,17,1,5],[12,7,1,3],[12,8,1,4],[12,9,1,3],[12,10,4,4],[12,14,1,5],[12,15,1,4],[12,16,2,9],[13,7,2,3],[13,9,1,4],[13,10,1,3],[13,11,2,4],[13,13,5,5],[14,10,2,10],[14,12,2,3],[14,14,1,4],[14,15,1,3],[14,16,2,11],[15,10,2,10],[15,12,1,5],[15,13,2,4],[15,15,1,5],[15,16,2,11],[16,9,1,10],[16,10,1,11],[16,11,1,10],[16,12,1,5],[16,13,1,4],[16,14,1,5],[16,15,1,11],[16,16,1,12],[17,9,2,10],[17,11,1,11],[17,12,1,4],[17,13,3,15],[17,16,1,11],[18,8,1,11],[18,9,1,10],[18,10,2,11],[18,12,2,4],[18,14,1,5],[18,15,1,11],[19,8,1,10],[19,9,1,11],[19,10,1,10],[19,11,1,11],[19,12,1,3],[19,13,1,4],[19,14,1,11],[19,15,1,12],[20,7,1,17],[20,8,1,18],[20,9,1,17],[20,10,3,4],[20,13,2,18],[20,15,1,16],[21,7,2,17],[21,9,1,18],[21,10,1,3],[21,11,3,4],[21,14,1,18],[21,15,1,16],[22,7,3,18],[22,10,4,4],[22,14,1,19],[22,15,1,16],[23,7,3,18],[23,10,2,4],[23,12,1,3],[23,13,2,4],[24,11,3,4],[24,14,1,5],[25,11,4,4],[25,15,2,22],[26,11,3,4],[26,14,3,23],[27,11,2,4],[27,13,4,24],[28,11,1,25],[28,12,1,26],[28,13,1,25],[28,14,2,26],[29,11,2,26],[29,13,1,27],[29,14,1,26],[29,15,1,27],[30,11,5,24]],[[1,7,10,0],[2,7,2,1],[2,9,1,0],[2,10,3,1],[2,13,1,0],[2,14,3,1],[3,5,3,0],[3,8,9,1],[4,5,1,0],[4,6,1,1],[4,7,1,0],[4,8,9,2],[5,5,1,1],[5,6,1,0],[5,7,1,1],[5,15,2,0],[5,17,1,1],[5,18,1,0],[5,19,2,1],[5,21,2,2],[6,5,1,1],[6,6,1,2],[6,7,3,3],[6,10,4,4],[6,14,4,5],[7,5,1,2],[7,6,1,1],[7,7,3,3],[7,10,9,6],[8,5,2,2],[8,7,4,6],[8,11,8,7],[9,7,2,3],[9,9,1,4],[9,10,9,8],[9,19,1,5],[10,7,3,3],[10,10,4,4],[10,14,4,5],[10,18,1,3],[10,19,1,5],[11,7,4,3],[11,11,4,4],[11,15,1,5],[11,16,1,4],[11,17,1,5],[12,7,1,3],[12,8,1,4],[12,9,1,3],[12,10,4,4],[12,14,1,5],[12,15,1,4],[12,16,2,9],[13,7,2,3],[13,9,1,4],[13,10,1,3],[13,11,2,4],[13,13,5,5],[14,11,1,10],[14,12,2,3],[14,14,1,4],[14,15,1,3],[14,16,2,11],[14,18,1,12],[15,10,2,10],[15,12,2,5],[15,14,1,4],[15,15,1,5],[15,16,2,11],[16,8,1,14],[16,9,1,16],[16,10,2,10],[16,12,2,11],[16,14,1,4],[16,15,1,11],[16,16,1,5],[16,17,1,11],[16,18,1,5],[17,8,1,16],[17,9,2,10],[17,11,1,11],[17,12,1,10],[17,13,3,15],[17,16,1,4],[17,17,1,13],[18,8,1,16],[18,9,1,10],[18,10,1,11],[18,11,1,10],[18,12,2,11],[18,14,4,4],[18,18,1,5],[19,8,3,10],[19,11,3,11],[19,14,3,4],[20,8,4,11],[20,12,1,12],[20,13,1,11],[20,14,1,4],[20,15,1,12],[21,7,2,17],[21,9,1,18],[21,10,1,3],[21,11,2,4],[21,13,2,18],[22,7,1,17],[22,8,1,18],[22,9,4,4],[22,13,1,18],[22,14,1,19],[23,7,1,18],[23,8,1,17],[23,9,3,4],[23,12,1,3],[23,13,1,19],[23,14,1,18],[23,15,1,16],[24,6,1,5],[24,7,6,4],[24,13,2,19],[24,15,1,16],[25,6,4,4],[25,10,1,3],[25,11,1,4],[25,12,4,16],[26,5,1,25],[26,6,1,26],[26,7,1,25],[26,8,2,26],[26,10,1,5],[26,14,1,14],[26,15,2,16],[27,5,2,26],[27,7,1,27],[27,8,1,26],[27,9,1,27],[27,14,3,16],[28,5,5,24],[28,14,2,21],[28,16,3,22],[29,14,3,22],[29,17,2,23],[30,14,5,24]],[[1,7,10,0],[2,7,2,1],[2,9,1,0],[2,10,3,1],[2,13,1,0],[2,14,3,1],[3,5,3,0],[3,8,9,1],[4,5,1,0],[4,6,1,1],[4,7,1,0],[4,8,9,2],[5,5,1,1],[5,6,1,0],[5,7,1,1],[5,15,2,0],[5,17,1,1],[5,18,1,0],[5,19,2,1],[5,21,2,2],[6,5,1,1],[6,6,1,2],[6,7,3,3],[6,10,4,4],[6,14,4,5],[7,5,1,2],[7,6,1,1],[7,7,3,3],[7,10,9,6],[8,5,2,2],[8,7,4,6],[8,11,8,7],[9,7,2,3],[9,9,1,4],[9,10,9,8],[9,19,1,5],[10,7,3,3],[10,10,4,4],[10,14,4,5],[10,18,1,3],[10,19,1,5],[11,7,4,3],[11,11,4,4],[11,15,1,5],[11,16,1,4],[11,17,1,5],[12,7,1,3],[12,8,1,4],[12,9,1,3],[12,10,4,4],[12,14,1,5],[12,15,1,4],[12,16,2,9],[13,7,2,3],[13,9,1,4],[13,10,1,3],[13,11,2,4],[13,13,5,5],[14,10,2,10],[14,12,2,3],[14,14,1,4],[14,15,1,3],[14,16,2,11],[15,10,2,10],[15,12,1,5],[15,13,2,4],[15,15,1,5],[15,16,2,11],[16,9,1,10],[16,10,1,11],[16,11,1,10],[16,12,1,11],[16,13,1,4],[16,14,1,5],[16,15,1,11],[16,16,1,12],[17,9,2,10],[17,11,1,11],[17,12,1,4],[17,13,3,15],[17,16,1,11],[18,8,1,11],[18,9,1,10],[18,10,2,11],[18,12,2,4],[18,14,1,5],[18,15,1,11],[19,8,1,10],[19,9,1,11],[19,10,1,10],[19,11,1,11],[19,12,1,3],[19,13,3,4],[20,7,1,17],[20,8,1,18],[20,9,1,17],[20,10,6,4],[21,7,2,17],[21,9,1,18],[21,10,1,3],[21,11,5,4],[22,7,3,18],[22,10,6,4],[23,7,4,18],[23,11,1,19],[23,12,3,4],[24,11,1,16],[24,12,1,5],[24,13,1,4],[24,14,1,5],[25,11,1,16],[25,12,3,25],[25,15,2,26],[26,11,1,16],[26,12,2,26],[26,14,3,27],[27,11,1,16],[27,12,5,24],[28,11,1,21],[28,12,1,22],[28,13,1,21],[28,14,2,22],[29,11,2,22],[29,13,1,23],[29,14,1,22],[29,15,1,23],[30,11,5,24]]]},"idle":{"w":22,"h":31,"f":[[[1,4,14,0],[2,4,1,1],[2,5,1,0],[2,6,3,1],[2,9,1,0],[2,10,3,1],[2,13,1,0],[2,14,3,1],[2,17,1,0],[3,4,14,1],[4,4,14,2],[5,3,4,0],[5,7,1,1],[5,8,1,0],[5,9,4,1],[5,13,1,2],[5,14,1,1],[5,15,1,2],[5,16,1,1],[5,17,2,2],[6,4,2,3],[6,6,1,4],[6,7,1,3],[6,8,4,4],[6,12,1,5],[6,13,1,4],[6,14,4,5],[7,4,14,6],[8,3,1,3],[8,4,14,7],[8,18,1,3],[9,3,1,4],[9,4,14,8],[9,18,1,4],[10,3,1,5],[10,4,2,3],[10,6,1,4],[10,7,1,3],[10,8,4,4],[10,12,1,5],[10,13,1,4],[10,14,5,5],[11,4,3,3],[11,7,1,4],[11,8,1,3],[11,9,6,4],[11,15,1,5],[11,16,1,4],[11,17,1,5],[12,4,2,3],[12,6,1,4],[12,7,1,3],[12,8,1,4],[12,9,4,9],[12,13,1,4],[12,14,4,5],[13,4,3,3],[13,7,1,4],[13,8,1,3],[13,9,4,4],[13,13,1,5],[13,14,1,4],[13,15,3,5],[14,7,2,28],[14,9,4,3],[14,13,1,10],[14,14,1,11],[15,4,1,3],[15,5,1,4],[15,6,1,5],[15,7,2,28],[15,9,4,10],[15,13,1,11],[15,14,1,10],[15,15,1,3],[15,16,1,4],[15,17,1,5],[16,4,1,3],[16,5,1,4],[16,6,1,5],[16,7,1,28],[16,8,4,10],[16,12,3,11],[16,15,3,15],[17,4,1,3],[17,5,1,4],[17,6,1,5],[17,7,4,10],[17,11,4,11],[17,15,1,3],[17,16,1,4],[17,17,1,5],[18,4,1,3],[18,5,1,4],[18,6,1,5],[18,7,3,10],[18,10,4,11],[18,14,1,12],[18,15,1,3],[18,16,1,4],[18,17,1,5],[19,4,3,13],[19,7,2,10],[19,9,4,11],[19,13,1,12],[19,14,1,11],[19,15,1,3],[19,16,1,4],[19,17,1,5],[20,7,1,10],[20,8,4,11],[20,12,3,12],[21,7,2,17],[21,9,1,18],[21,10,1,17],[21,11,1,18],[21,12,1,17],[21,13,2,18],[22,7,1,17],[22,8,6,18],[22,14,1,19],[23,7,4,18],[23,11,1,19],[23,12,1,18],[23,13,2,19],[24,8,1,3],[24,9,1,4],[24,10,1,5],[24,11,1,3],[24,12,1,4],[24,13,1,5],[25,8,1,3],[25,9,1,4],[25,10,1,5],[25,11,1,3],[25,12,1,4],[25,13,1,5],[26,8,1,25],[26,9,1,26],[26,10,1,27],[26,11,1,25],[26,12,1,26],[26,13,1,27],[27,7,2,25],[27,9,1,26],[27,10,3,25],[27,13,2,26],[28,7,1,26],[28,8,1,27],[28,9,3,26],[28,12,3,27],[29,7,8,24]]]},"bike":{"w":34,"h":32,"f":[[[0,11,10,0],[1,11,1,1],[1,12,1,0],[1,13,1,1],[1,14,1,0],[1,15,1,1],[1,16,1,0],[1,17,1,1],[1,18,1,0],[1,19,1,1],[1,20,1,0],[2,9,3,0],[2,12,1,2],[2,13,1,1],[2,14,1,2],[2,15,1,1],[2,16,1,2],[2,17,1,1],[2,18,1,2],[2,19,1,1],[2,20,1,2],[3,9,2,0],[3,11,1,1],[3,12,9,2],[4,9,3,1],[4,19,1,0],[4,20,4,1],[4,24,3,2],[5,9,2,1],[5,11,2,3],[5,13,1,4],[5,14,1,3],[5,15,4,4],[5,19,3,5],[6,9,1,1],[6,10,1,2],[6,11,3,3],[6,14,9,6],[7,9,2,2],[7,11,4,6],[7,15,8,7],[8,11,1,3],[8,12,1,4],[8,13,1,3],[8,14,9,8],[8,23,1,5],[9,11,2,3],[9,13,1,4],[9,14,1,3],[9,15,4,4],[9,19,3,5],[9,22,1,3],[9,23,1,5],[10,11,3,3],[10,14,4,4],[10,18,4,5],[11,11,4,3],[11,15,4,4],[11,19,1,5],[11,20,2,9],[12,11,1,3],[12,12,1,4],[12,13,3,3],[12,16,2,4],[12,18,1,5],[12,19,1,4],[12,20,2,5],[13,13,1,11],[13,14,1,10],[13,15,1,11],[13,16,1,10],[13,17,1,11],[13,18,2,10],[14,12,1,11],[14,13,1,10],[14,14,1,11],[14,15,1,10],[14,16,1,16],[14,17,1,10],[14,18,1,16],[14,19,2,10],[15,11,1,11],[15,12,1,10],[15,13,1,11],[15,14,1,10],[15,15,1,11],[15,16,1,10],[15,17,5,16],[16,10,6,11],[16,16,2,16],[16,18,5,4],[16,23,2,15],[16,25,1,4],[16,26,1,5],[17,5,5,13],[17,10,1,10],[17,11,1,11],[17,12,1,10],[17,13,1,11],[17,14,1,10],[17,15,1,11],[17,16,1,10],[17,17,1,11],[17,18,1,3],[17,19,6,4],[17,25,3,13],[18,4,3,13],[18,9,1,13],[18,10,5,11],[18,15,3,4],[18,18,1,5],[18,19,3,7],[18,22,1,8],[18,23,1,7],[18,24,1,4],[18,26,1,5],[18,27,2,13],[19,3,2,13],[19,8,3,17],[19,11,1,18],[19,12,1,3],[19,13,3,4],[19,16,1,3],[19,17,2,4],[19,19,2,13],[19,21,1,7],[19,23,1,7],[19,24,1,15],[19,28,2,13],[20,2,2,13],[20,8,2,18],[20,10,9,4],[20,19,1,13],[20,20,1,8],[20,23,1,7],[20,24,1,15],[20,29,2,13],[21,1,2,13],[21,8,1,17],[21,9,1,18],[21,10,1,3],[21,11,9,4],[21,24,1,7],[21,30,2,13],[22,1,2,13],[22,8,2,18],[22,10,5,4],[22,15,3,16],[22,18,1,5],[22,19,1,4],[22,24,1,7],[22,30,2,13],[23,1,1,13],[23,8,1,15],[23,11,5,16],[23,16,1,20],[23,17,1,16],[23,18,3,4],[23,24,1,7],[23,31,1,13],[24,1,1,13],[24,3,5,15],[24,8,2,7],[24,10,1,25],[24,11,1,26],[24,12,2,27],[24,14,4,16],[24,18,1,25],[24,19,1,26],[24,20,2,27],[24,22,2,15],[24,24,1,8],[24,25,5,15],[24,31,1,13],[25,1,1,13],[25,8,1,15],[25,10,1,25],[25,11,2,26],[25,13,1,27],[25,14,2,7],[25,16,2,16],[25,18,1,25],[25,19,2,26],[25,21,1,27],[25,24,1,15],[25,31,1,13],[26,1,2,13],[26,8,1,15],[26,10,4,24],[26,14,2,13],[26,17,1,13],[26,18,4,24],[26,24,1,15],[26,30,2,13],[27,1,2,13],[27,8,1,15],[27,14,2,13],[27,17,2,13],[27,24,1,15],[27,30,2,13],[28,2,2,13],[28,8,1,15],[28,13,2,13],[28,18,2,13],[28,24,1,15],[28,29,2,13],[29,3,2,13],[29,8,1,15],[29,12,2,13],[29,19,2,13],[29,24,1,15],[29,28,2,13],[30,4,3,13],[30,10,3,13],[30,20,3,13],[30,26,3,13],[31,5,7,13],[31,21,7,13]],[[0,11,10,0],[1,11,1,1],[1,12,1,0],[1,13,1,1],[1,14,1,0],[1,15,1,1],[1,16,1,0],[1,17,1,1],[1,18,1,0],[1,19,1,1],[1,20,1,0],[2,9,3,0],[2,12,1,2],[2,13,1,1],[2,14,1,2],[2,15,1,1],[2,16,1,2],[2,17,1,1],[2,18,1,2],[2,19,1,1],[2,20,1,2],[3,9,2,0],[3,11,1,1],[3,12,9,2],[4,9,3,1],[4,19,1,0],[4,20,4,1],[4,24,3,2],[5,9,2,1],[5,11,2,3],[5,13,1,4],[5,14,1,3],[5,15,4,4],[5,19,3,5],[6,9,1,1],[6,10,1,2],[6,11,3,3],[6,14,9,6],[7,9,2,2],[7,11,4,6],[7,15,8,7],[8,11,1,3],[8,12,1,4],[8,13,1,3],[8,14,9,8],[8,23,1,5],[9,11,2,3],[9,13,1,4],[9,14,1,3],[9,15,4,4],[9,19,3,5],[9,22,1,3],[9,23,1,5],[10,11,3,3],[10,14,4,4],[10,18,4,5],[11,11,4,3],[11,15,4,4],[11,19,1,5],[11,20,2,9],[12,11,1,3],[12,12,1,4],[12,13,3,3],[12,16,2,4],[12,18,1,5],[12,19,1,4],[12,20,2,5],[13,13,1,11],[13,14,1,10],[13,15,1,11],[13,16,1,10],[13,17,1,11],[13,18,2,10],[14,12,1,11],[14,13,1,10],[14,14,1,11],[14,15,1,10],[14,16,1,16],[14,17,1,10],[14,18,1,16],[14,19,2,10],[15,11,1,11],[15,12,1,10],[15,13,1,11],[15,14,1,10],[15,15,1,11],[15,16,1,10],[15,17,5,16],[16,10,6,11],[16,16,2,16],[16,18,5,4],[16,23,2,15],[16,25,1,4],[16,26,1,5],[17,5,5,13],[17,10,1,10],[17,11,1,11],[17,12,1,10],[17,13,1,11],[17,14,1,10],[17,15,1,11],[17,16,1,10],[17,17,1,11],[17,18,1,3],[17,19,6,4],[17,25,3,13],[18,4,3,13],[18,9,1,13],[18,10,7,11],[18,17,1,10],[18,18,1,11],[18,19,3,7],[18,22,1,8],[18,23,1,7],[18,24,1,4],[18,26,1,5],[18,27,2,13],[19,3,2,13],[19,8,3,17],[19,11,1,18],[19,12,1,17],[19,13,1,18],[19,14,1,10],[19,15,1,11],[19,16,1,10],[19,17,1,11],[19,19,2,13],[19,21,1,7],[19,23,1,7],[19,26,1,15],[19,28,2,13],[20,2,2,13],[20,8,2,18],[20,10,4,4],[20,14,3,11],[20,17,1,27],[20,18,2,13],[20,20,1,8],[20,23,1,7],[20,26,1,15],[20,29,2,13],[21,1,2,13],[21,8,1,17],[21,9,1,18],[21,10,1,3],[21,11,5,4],[21,16,1,26],[21,17,1,27],[21,18,1,13],[21,19,1,7],[21,24,1,7],[21,25,1,15],[21,30,2,13],[22,1,2,13],[22,3,2,15],[22,8,2,18],[22,10,8,4],[22,18,1,5],[22,19,2,15],[22,24,1,7],[22,25,1,15],[22,30,2,13],[23,1,1,13],[23,5,5,15],[23,10,2,16],[23,12,1,3],[23,13,3,4],[23,16,1,3],[23,17,2,4],[23,21,3,15],[23,24,1,7],[23,25,1,15],[23,31,1,13],[24,1,1,13],[24,7,1,15],[24,8,3,7],[24,11,1,16],[24,12,1,14],[24,13,1,16],[24,14,4,4],[24,18,1,5],[24,23,1,15],[24,24,1,8],[24,25,1,15],[24,31,1,13],[25,1,1,13],[25,7,4,15],[25,11,4,16],[25,15,3,4],[25,23,5,15],[25,31,1,13],[26,1,2,13],[26,7,1,15],[26,12,3,16],[26,15,3,4],[26,18,1,13],[26,23,1,15],[26,28,2,15],[26,30,2,13],[27,1,2,13],[27,7,1,15],[27,12,2,16],[27,14,1,20],[27,15,2,4],[27,17,2,13],[27,23,1,15],[27,30,2,13],[28,2,2,13],[28,6,1,15],[28,13,1,16],[28,14,1,25],[28,15,1,26],[28,16,2,27],[28,18,2,13],[28,22,1,15],[28,29,2,13],[29,3,2,13],[29,6,1,15],[29,12,2,13],[29,14,1,25],[29,15,2,26],[29,17,1,27],[29,19,2,13],[29,22,1,15],[29,28,2,13],[30,4,3,13],[30,10,3,13],[30,14,4,24],[30,20,3,13],[30,26,3,13],[31,5,7,13],[31,21,7,13]],[[0,11,10,0],[1,11,1,1],[1,12,1,0],[1,13,1,1],[1,14,1,0],[1,15,1,1],[1,16,1,0],[1,17,1,1],[1,18,1,0],[1,19,1,1],[1,20,1,0],[2,9,3,0],[2,12,1,2],[2,13,1,1],[2,14,1,2],[2,15,1,1],[2,16,1,2],[2,17,1,1],[2,18,1,2],[2,19,1,1],[2,20,1,2],[3,9,2,0],[3,11,1,1],[3,12,9,2],[4,9,3,1],[4,19,1,0],[4,20,4,1],[4,24,3,2],[5,9,2,1],[5,11,2,3],[5,13,1,4],[5,14,1,3],[5,15,4,4],[5,19,3,5],[6,9,1,1],[6,10,1,2],[6,11,3,3],[6,14,9,6],[7,9,2,2],[7,11,4,6],[7,15,8,7],[8,11,1,3],[8,12,1,4],[8,13,1,3],[8,14,9,8],[8,23,1,5],[9,11,2,3],[9,13,1,4],[9,14,1,3],[9,15,4,4],[9,19,3,5],[9,22,1,3],[9,23,1,5],[10,11,3,3],[10,14,4,4],[10,18,4,5],[11,11,4,3],[11,15,4,4],[11,19,1,5],[11,20,2,9],[12,11,1,3],[12,12,1,4],[12,13,3,3],[12,16,2,4],[12,18,1,5],[12,19,1,4],[12,20,2,5],[13,13,1,11],[13,14,1,10],[13,15,1,11],[13,16,1,10],[13,17,1,11],[13,18,2,10],[14,12,1,11],[14,13,1,10],[14,14,1,11],[14,15,1,10],[14,16,1,16],[14,17,1,10],[14,18,1,16],[14,19,2,10],[15,11,1,11],[15,12,1,10],[15,13,1,11],[15,14,1,10],[15,15,1,11],[15,16,1,10],[15,17,5,16],[16,10,6,11],[16,16,2,16],[16,18,5,4],[16,23,2,15],[16,25,1,4],[16,26,1,5],[17,5,5,13],[17,10,1,10],[17,11,1,11],[17,12,1,10],[17,13,1,11],[17,14,1,10],[17,15,1,11],[17,16,1,10],[17,17,1,11],[17,18,1,3],[17,19,6,4],[17,25,3,13],[18,4,3,13],[18,9,1,13],[18,10,7,11],[18,17,1,10],[18,18,1,11],[18,19,3,7],[18,22,1,8],[18,23,1,7],[18,24,1,4],[18,26,1,5],[18,27,2,13],[19,3,2,13],[19,8,3,17],[19,11,1,18],[19,12,1,17],[19,13,1,18],[19,14,1,10],[19,15,1,11],[19,16,1,10],[19,17,1,11],[19,18,1,16],[19,19,2,13],[19,21,1,7],[19,23,1,7],[19,28,2,13],[20,2,2,13],[20,4,1,15],[20,8,2,18],[20,10,4,4],[20,14,3,11],[20,17,2,16],[20,19,1,13],[20,20,1,8],[20,23,1,7],[20,28,1,15],[20,29,2,13],[21,1,2,13],[21,5,1,15],[21,8,1,17],[21,9,1,18],[21,10,1,3],[21,11,5,4],[21,16,4,16],[21,21,1,15],[21,24,1,7],[21,27,1,15],[21,30,2,13],[22,1,2,13],[22,6,1,15],[22,8,2,18],[22,10,8,4],[22,18,1,14],[22,19,1,16],[22,22,1,15],[22,24,1,7],[22,26,1,15],[22,30,2,13],[23,1,1,13],[23,7,1,15],[23,9,1,15],[23,11,5,4],[23,16,1,3],[23,17,2,4],[23,19,2,16],[23,23,1,15],[23,24,1,7],[23,25,1,15],[23,31,1,13],[24,1,1,13],[24,8,2,7],[24,10,1,25],[24,11,1,26],[24,12,2,27],[24,14,4,4],[24,18,1,5],[24,19,1,26],[24,20,2,27],[24,24,1,8],[24,31,1,13],[25,1,1,13],[25,7,1,15],[25,9,1,15],[25,10,1,25],[25,11,2,26],[25,13,1,27],[25,14,2,7],[25,16,3,4],[25,19,2,26],[25,21,1,27],[25,23,1,15],[25,25,1,15],[25,31,1,13],[26,1,2,13],[26,6,1,15],[26,10,4,24],[26,14,2,13],[26,17,1,13],[26,18,4,24],[26,22,1,15],[26,26,1,15],[26,30,2,13],[27,1,2,13],[27,5,1,15],[27,11,1,15],[27,14,2,13],[27,17,2,13],[27,21,1,15],[27,27,1,15],[27,30,2,13],[28,2,2,13],[28,4,1,15],[28,12,1,15],[28,13,2,13],[28,18,2,13],[28,20,1,15],[28,28,1,15],[28,29,2,13],[29,3,2,13],[29,12,2,13],[29,19,2,13],[29,28,2,13],[30,4,3,13],[30,10,3,13],[30,20,3,13],[30,26,3,13],[31,5,7,13],[31,21,7,13]],[[0,11,10,0],[1,11,1,1],[1,12,1,0],[1,13,1,1],[1,14,1,0],[1,15,1,1],[1,16,1,0],[1,17,1,1],[1,18,1,0],[1,19,1,1],[1,20,1,0],[2,9,3,0],[2,12,1,2],[2,13,1,1],[2,14,1,2],[2,15,1,1],[2,16,1,2],[2,17,1,1],[2,18,1,2],[2,19,1,1],[2,20,1,2],[3,9,2,0],[3,11,1,1],[3,12,9,2],[4,9,3,1],[4,19,1,0],[4,20,4,1],[4,24,3,2],[5,9,2,1],[5,11,2,3],[5,13,1,4],[5,14,1,3],[5,15,4,4],[5,19,3,5],[6,9,1,1],[6,10,1,2],[6,11,3,3],[6,14,9,6],[7,9,2,2],[7,11,4,6],[7,15,8,7],[8,11,1,3],[8,12,1,4],[8,13,1,3],[8,14,9,8],[8,23,1,5],[9,11,2,3],[9,13,1,4],[9,14,1,3],[9,15,4,4],[9,19,3,5],[9,22,1,3],[9,23,1,5],[10,11,3,3],[10,14,4,4],[10,18,4,5],[11,11,4,3],[11,15,4,4],[11,19,1,5],[11,20,2,9],[12,11,1,3],[12,12,1,4],[12,13,3,3],[12,16,2,4],[12,18,1,5],[12,19,1,4],[12,20,2,5],[13,13,1,11],[13,14,1,10],[13,15,1,11],[13,16,1,10],[13,17,1,11],[13,18,2,10],[14,12,1,11],[14,13,1,10],[14,14,1,11],[14,15,1,10],[14,16,1,16],[14,17,1,10],[14,18,1,16],[14,19,2,10],[15,11,1,11],[15,12,1,10],[15,13,1,11],[15,14,1,10],[15,15,1,11],[15,16,1,10],[15,17,5,16],[16,10,6,11],[16,16,2,16],[16,18,5,4],[16,23,2,15],[16,25,1,4],[16,26,1,5],[17,5,5,13],[17,10,1,10],[17,11,1,11],[17,12,1,10],[17,13,1,11],[17,14,1,10],[17,15,1,11],[17,16,1,10],[17,17,1,11],[17,18,1,3],[17,19,6,4],[17,25,3,13],[18,4,3,13],[18,9,1,13],[18,10,7,11],[18,17,1,10],[18,18,1,11],[18,19,3,7],[18,22,1,8],[18,23,1,7],[18,24,1,4],[18,26,1,5],[18,27,2,13],[19,3,2,13],[19,6,1,15],[19,8,3,17],[19,11,1,18],[19,12,1,17],[19,13,1,18],[19,14,1,4],[19,15,1,11],[19,16,1,4],[19,17,1,11],[19,19,2,13],[19,21,1,7],[19,22,1,15],[19,23,1,7],[19,28,2,13],[20,2,2,13],[20,6,1,15],[20,8,2,18],[20,10,3,4],[20,13,1,18],[20,14,1,25],[20,15,1,26],[20,16,2,27],[20,18,2,13],[20,20,1,8],[20,22,1,15],[20,23,1,7],[20,29,2,13],[21,1,2,13],[21,7,1,15],[21,8,1,17],[21,9,1,18],[21,10,1,3],[21,11,2,4],[21,13,1,19],[21,14,1,25],[21,15,2,26],[21,17,1,27],[21,18,1,13],[21,19,1,7],[21,23,1,15],[21,24,1,7],[21,30,2,13],[22,1,2,13],[22,7,1,15],[22,8,2,18],[22,10,4,4],[22,14,4,24],[22,18,1,14],[22,23,1,15],[22,24,1,7],[22,28,2,15],[22,30,2,13],[23,1,1,13],[23,7,3,15],[23,10,6,4],[23,16,1,20],[23,17,2,16],[23,23,1,15],[23,24,1,7],[23,25,3,15],[23,31,1,13],[24,1,1,13],[24,7,1,15],[24,8,3,7],[24,11,1,4],[24,12,1,5],[24,13,3,4],[24,16,2,16],[24,18,1,14],[24,23,1,15],[24,24,1,8],[24,25,1,15],[24,31,1,13],[25,1,1,13],[25,5,5,15],[25,11,5,4],[25,16,2,16],[25,21,5,15],[25,31,1,13],[26,1,2,13],[26,3,2,15],[26,9,1,15],[26,12,4,4],[26,16,2,16],[26,18,1,13],[26,19,2,15],[26,25,1,15],[26,30,2,13],[27,1,2,13],[27,9,1,15],[27,12,2,4],[27,14,1,3],[27,15,1,4],[27,16,1,16],[27,17,2,13],[27,25,1,15],[27,30,2,13],[28,2,2,13],[28,10,1,15],[28,13,1,4],[28,14,1,5],[28,15,1,4],[28,16,2,27],[28,18,2,13],[28,26,1,15],[28,29,2,13],[29,3,2,13],[29,10,1,15],[29,12,2,13],[29,14,1,25],[29,15,2,26],[29,17,1,27],[29,19,2,13],[29,26,1,15],[29,28,2,13],[30,4,3,13],[30,10,3,13],[30,14,4,24],[30,20,3,13],[30,26,3,13],[31,5,7,13],[31,21,7,13]]]},"swim":{"w":34,"h":24,"f":[[[0,17,11,24],[1,17,1,29],[1,18,1,24],[1,19,1,29],[1,20,1,24],[1,21,1,29],[1,22,1,24],[1,23,1,29],[1,24,1,24],[1,25,1,29],[1,26,1,24],[1,27,1,29],[2,16,2,24],[2,18,1,30],[2,19,1,29],[2,20,1,30],[2,21,1,29],[2,22,1,30],[2,23,1,29],[2,24,1,30],[2,25,1,29],[2,26,1,30],[2,27,1,29],[3,16,2,24],[3,18,10,30],[4,16,1,29],[4,17,11,24],[5,16,1,29],[5,17,3,3],[5,20,9,6],[6,16,4,13],[6,20,1,4],[6,21,1,7],[6,22,1,4],[6,23,6,7],[7,16,1,30],[7,17,2,3],[7,19,6,4],[7,25,4,8],[7,29,1,5],[8,17,1,3],[8,18,6,4],[8,24,1,5],[8,25,1,4],[8,26,1,5],[8,27,1,4],[8,28,1,5],[8,29,1,9],[9,17,1,3],[9,18,9,4],[9,27,1,3],[9,28,1,4],[10,2,1,26],[10,17,1,3],[10,18,6,4],[10,24,1,5],[10,25,1,4],[10,26,1,5],[10,27,1,4],[10,28,1,5],[11,1,1,26],[11,2,5,28],[11,7,1,10],[11,8,1,28],[11,9,1,10],[11,10,1,28],[11,11,6,10],[11,17,3,4],[11,20,1,3],[11,21,2,4],[11,23,3,5],[11,26,1,4],[11,27,1,5],[12,2,1,10],[12,3,1,26],[12,4,4,10],[12,8,1,11],[12,9,1,10],[12,10,1,11],[12,11,1,10],[12,12,4,11],[12,16,3,4],[13,0,1,26],[13,2,3,10],[13,5,1,11],[13,6,1,10],[13,7,1,11],[13,8,1,10],[13,9,1,11],[13,10,1,10],[13,11,6,11],[13,17,1,12],[14,0,34,31],[15,0,34,31],[16,0,3,32],[16,3,1,31],[16,4,3,32],[16,7,1,31],[16,8,3,32],[16,11,1,31],[16,12,3,32],[16,15,1,31],[16,16,3,32],[16,19,1,31],[16,20,3,32],[16,23,1,31],[16,24,3,32],[16,27,1,31],[16,28,3,32],[16,31,1,31],[16,32,2,32],[17,0,2,32],[17,2,1,31],[17,3,3,32],[17,6,1,31],[17,7,3,32],[17,10,1,31],[17,11,3,32],[17,14,1,31],[17,15,3,32],[17,18,1,31],[17,19,3,32],[17,22,1,31],[17,23,3,32],[17,26,1,31],[17,27,3,32],[17,30,1,31],[17,31,3,32],[18,0,2,32],[18,2,1,33],[18,3,3,32],[18,6,1,33],[18,7,3,32],[18,10,1,33],[18,11,3,32],[18,14,1,33],[18,15,3,32],[18,18,1,33],[18,19,3,32],[18,22,1,33],[18,23,3,32],[18,26,1,33],[18,27,3,32],[18,30,1,33],[18,31,3,32],[19,0,1,32],[19,1,1,33],[19,2,1,32],[19,3,1,33],[19,4,1,32],[19,5,1,33],[19,6,1,32],[19,7,1,33],[19,8,1,32],[19,9,1,33],[19,10,1,32],[19,11,1,33],[19,12,1,32],[19,13,1,33],[19,14,1,32],[19,15,1,33],[19,16,1,32],[19,17,1,33],[19,18,1,32],[19,19,1,33],[19,20,1,32],[19,21,1,33],[19,22,1,32],[19,23,1,33],[19,24,1,32],[19,25,1,33],[19,26,1,32],[19,27,1,33],[19,28,1,32],[19,29,1,33],[19,30,1,32],[19,31,1,33],[19,32,1,32],[19,33,1,33],[20,0,34,33],[21,0,34,33],[22,0,1,34],[22,1,1,33],[22,2,1,34],[22,3,1,33],[22,4,1,34],[22,5,1,33],[22,6,1,34],[22,7,1,33],[22,8,1,34],[22,9,1,33],[22,10,1,34],[22,11,1,33],[22,12,1,34],[22,13,1,33],[22,14,1,34],[22,15,1,33],[22,16,1,34],[22,17,1,33],[22,18,1,34],[22,19,1,33],[22,20,1,34],[22,21,1,33],[22,22,1,34],[22,23,1,33],[22,24,1,34],[22,25,1,33],[22,26,1,34],[22,27,1,33],[22,28,1,34],[22,29,1,33],[22,30,1,34],[22,31,1,33],[22,32,1,34],[22,33,1,33],[23,0,1,33],[23,1,1,34],[23,2,1,33],[23,3,1,34],[23,4,1,33],[23,5,1,34],[23,6,1,33],[23,7,1,34],[23,8,1,33],[23,9,1,34],[23,10,1,33],[23,11,1,34],[23,12,1,33],[23,13,1,34],[23,14,1,33],[23,15,1,34],[23,16,1,33],[23,17,1,34],[23,18,1,33],[23,19,1,34],[23,20,1,33],[23,21,1,34],[23,22,1,33],[23,23,1,34],[23,24,1,33],[23,25,1,34],[23,26,1,33],[23,27,1,34],[23,28,1,33],[23,29,1,34],[23,30,1,33],[23,31,1,34],[23,32,1,33],[23,33,1,34]],[[0,17,11,24],[1,17,1,29],[1,18,1,24],[1,19,1,29],[1,20,1,24],[1,21,1,29],[1,22,1,24],[1,23,1,29],[1,24,1,24],[1,25,1,29],[1,26,1,24],[1,27,1,29],[2,16,2,24],[2,18,1,30],[2,19,1,29],[2,20,1,30],[2,21,1,29],[2,22,1,30],[2,23,1,29],[2,24,1,30],[2,25,1,29],[2,26,1,30],[2,27,1,29],[3,16,2,24],[3,18,10,30],[4,16,1,29],[4,17,11,24],[5,16,1,29],[5,17,3,3],[5,20,9,6],[6,16,5,13],[6,21,8,7],[7,16,1,30],[7,17,2,3],[7,19,1,4],[7,20,9,8],[7,29,1,5],[8,17,1,3],[8,18,1,4],[8,19,1,3],[8,20,4,4],[8,24,4,5],[8,28,2,9],[9,17,4,3],[9,21,4,4],[9,25,1,5],[9,26,1,4],[9,27,1,5],[10,3,1,26],[10,17,1,3],[10,18,1,4],[10,19,1,3],[10,20,4,4],[10,24,1,5],[10,25,1,4],[10,26,2,5],[11,0,1,26],[11,2,5,28],[11,7,1,10],[11,8,1,28],[11,9,1,10],[11,10,1,28],[11,11,6,10],[11,17,2,3],[11,19,1,4],[11,20,1,3],[11,21,2,4],[11,23,3,5],[11,26,1,4],[11,27,1,5],[12,1,1,26],[12,2,1,10],[12,3,1,28],[12,4,4,10],[12,8,1,11],[12,9,1,10],[12,10,1,11],[12,11,1,10],[12,12,1,11],[12,13,4,16],[12,17,7,4],[12,24,1,5],[12,25,3,4],[12,28,1,3],[12,29,1,4],[13,2,1,26],[13,3,2,10],[13,5,1,11],[13,6,1,10],[13,7,1,11],[13,8,1,10],[13,9,1,11],[13,10,7,16],[13,17,1,12],[13,28,1,3],[13,29,1,5],[14,0,34,31],[15,0,34,31],[16,0,3,32],[16,3,1,31],[16,4,3,32],[16,7,1,31],[16,8,3,32],[16,11,1,31],[16,12,3,32],[16,15,1,31],[16,16,3,32],[16,19,1,31],[16,20,3,32],[16,23,1,31],[16,24,3,32],[16,27,1,31],[16,28,3,32],[16,31,1,31],[16,32,2,32],[17,0,2,32],[17,2,1,31],[17,3,3,32],[17,6,1,31],[17,7,3,32],[17,10,1,31],[17,11,3,32],[17,14,1,31],[17,15,3,32],[17,18,1,31],[17,19,3,32],[17,22,1,31],[17,23,3,32],[17,26,1,31],[17,27,3,32],[17,30,1,31],[17,31,3,32],[18,0,2,32],[18,2,1,33],[18,3,3,32],[18,6,1,33],[18,7,3,32],[18,10,1,33],[18,11,3,32],[18,14,1,33],[18,15,3,32],[18,18,1,33],[18,19,3,32],[18,22,1,33],[18,23,3,32],[18,26,1,33],[18,27,3,32],[18,30,1,33],[18,31,3,32],[19,0,1,32],[19,1,1,33],[19,2,1,32],[19,3,1,33],[19,4,1,32],[19,5,1,33],[19,6,1,32],[19,7,1,33],[19,8,1,32],[19,9,1,33],[19,10,1,32],[19,11,1,33],[19,12,1,32],[19,13,1,33],[19,14,1,32],[19,15,1,33],[19,16,1,32],[19,17,1,33],[19,18,1,32],[19,19,1,33],[19,20,1,32],[19,21,1,33],[19,22,1,32],[19,23,1,33],[19,24,1,32],[19,25,1,33],[19,26,1,32],[19,27,1,33],[19,28,1,32],[19,29,1,33],[19,30,1,32],[19,31,1,33],[19,32,1,32],[19,33,1,33],[20,0,34,33],[21,0,34,33],[22,0,1,34],[22,1,1,33],[22,2,1,34],[22,3,1,33],[22,4,1,34],[22,5,1,33],[22,6,1,34],[22,7,1,33],[22,8,1,34],[22,9,1,33],[22,10,1,34],[22,11,1,33],[22,12,1,34],[22,13,1,33],[22,14,1,34],[22,15,1,33],[22,16,1,34],[22,17,1,33],[22,18,1,34],[22,19,1,33],[22,20,1,34],[22,21,1,33],[22,22,1,34],[22,23,1,33],[22,24,1,34],[22,25,1,33],[22,26,1,34],[22,27,1,33],[22,28,1,34],[22,29,1,33],[22,30,1,34],[22,31,1,33],[22,32,1,34],[22,33,1,33],[23,0,1,33],[23,1,1,34],[23,2,1,33],[23,3,1,34],[23,4,1,33],[23,5,1,34],[23,6,1,33],[23,7,1,34],[23,8,1,33],[23,9,1,34],[23,10,1,33],[23,11,1,34],[23,12,1,33],[23,13,1,34],[23,14,1,33],[23,15,1,34],[23,16,1,33],[23,17,1,34],[23,18,1,33],[23,19,1,34],[23,20,1,33],[23,21,1,34],[23,22,1,33],[23,23,1,34],[23,24,1,33],[23,25,1,34],[23,26,1,33],[23,27,1,34],[23,28,1,33],[23,29,1,34],[23,30,1,33],[23,31,1,34],[23,32,1,33],[23,33,1,34]]]}}};
+var KIND2ACT={'跑':'run','騎':'bike','游':'swim'};
+function todayAct(){
+  var t=today(), w=workouts.filter(function(x){return !x.unplanned&&x.date===t&&x.kind!=='休息'})[0];
+  return (w&&KIND2ACT[w.kind])||'idle';
+}
+var SWEAT={run:[[0,6],[23,4],[13,-2]],idle:[[-2,7],[18,7],[9,-2]],bike:[[4,5],[29,4],[17,-2]],swim:[[10,0],[33,2],[22,-3]]};
+function sweatLevel(){var j=wJudge(wDay(today()));return j==='near'?1:(j==='out'?3:0)}
+var DROP=['..a..','..a..','.bbb.','bbbbc','.bbc.'];
+function dropShape(x,y,u,fill,hi){
+  var o='';
+  DROP.forEach(function(row,ry){
+    for(var cx=0;cx<row.length;cx++){var ch=row[cx]; if(ch==='.') continue;
+      o+='<rect x="'+(x+cx*u)+'" y="'+(y+ry*u)+'" width="'+u+'" height="'+u+'" fill="'+(ch==='c'?hi.dark:(ch==='a'?hi.tip:fill))+'"/>';}
+  });
+  return o;
+}
+function drops(act,K,n){
+  var P=(SWEAT[act]||SWEAT.idle).slice(0,n), o='', u=2;
+  P.forEach(function(p,i){
+    var x=p[0]*K,y=p[1]*K;
+    o+='<g class="sdrop" style="animation-delay:'+(i*0.3)+'s">';
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(function(d){o+=dropShape(x+d[0],y+d[1],u,'#1d4f8c',{dark:'#1d4f8c',tip:'#1d4f8c'})});
+    o+=dropShape(x,y,u,'#7cc4f0',{dark:'#4a9ad8',tip:'#7cc4f0'});
+    o+='<rect x="'+(x+u)+'" y="'+(y+3*u)+'" width="'+u+'" height="'+u+'" fill="#f2fbff"/></g>';
+  });
+  return o;
+}
+function sprite(x,y,left,act,lvl){
+  var A=ACT.a[act]||ACT.a.idle, K=2, w=A.w*K, h=A.h*K, n=A.f.length;
+  var order=A.f.map(function(_,i){return i});
+  var cnt=order.length, stat=act==='run'?1:0;
+  x=Math.max(w/2+2,Math.min(338-w/2,x));
+  var out='<g transform="translate('+(x-w/2)+','+(y-h+8)+')"><g'+(left?' transform="translate('+w+',0) scale(-1,1)"':'')+'>';
+  order.forEach(function(fi,k){
+    var anim=cnt>1?' style="animation:rf'+cnt+' '+(cnt===4?0.6:0.5)+'s steps(1,end) infinite;animation-delay:'+(k*(cnt===4?0.15:0.25))+'s"':' style="opacity:1"';
+    out+='<g class="rf"'+(k===stat?' data-s="1"':'')+anim+'>';
+    A.f[fi].forEach(function(r){out+='<rect x="'+(r[1]*K)+'" y="'+(r[0]*K)+'" width="'+(r[2]*K)+'" height="'+K+'" fill="#'+ACT.p[r[3]]+'"/>'});
+    out+='</g>';
+  });
+  if(lvl) out+=drops(act,K,lvl);
+  return out+'</g></g>';
+}
+function tree(x,y){
+  return '<rect class="m-trunk" x="'+(x+4)+'" y="'+(y+12)+'" width="4" height="8"/><rect class="m-leaf2" x="'+x+'" y="'+(y+4)+'" width="12" height="8"/><rect class="m-leaf2" x="'+(x+2)+'" y="'+y+'" width="8" height="6"/>';
+}
+var POS={
+  w0:{x:32,y:96},w1:{x:94,y:96},w2:{x:156,y:96},g1:{x:218,y:96},r1:{x:288,y:96},
+  w3:{x:288,y:236},w4:{x:238,y:236},w5:{x:188,y:236},w6:{x:138,y:236},g2:{x:88,y:236},r2:{x:30,y:236}
+};
+function isSel(type,id){return !!sel&&sel.type===type&&String(sel.id)===String(id)}
+function buildMap(){
+  var s='<svg viewBox="0 0 340 330" role="img" aria-label="冒險路線圖" shape-rendering="crispEdges">';
+  s+='<rect class="m-sky" x="0" y="0" width="340" height="40"/><rect class="m-grass" x="0" y="40" width="340" height="290"/>';
+  for(var y=50;y<330;y+=24) s+='<rect class="m-grass2" x="0" y="'+y+'" width="340" height="10"/>';
+  s+=tree(8,150)+tree(60,156)+tree(310,160)+tree(150,160)+tree(250,170)+tree(300,290)+tree(210,288)+tree(110,290)+tree(10,288);
+  s+='<polyline class="m-track" points="32,96 288,96 288,236 30,236" fill="none" stroke-width="18" stroke-linejoin="miter"/>';
+  s+='<polyline class="m-lane" points="32,96 288,96 288,236 30,236" fill="none" stroke-width="2" stroke-dasharray="6 6"/>';
+  var t=today(), c=curIdx(), i, id, p, st, cls, mid;
+  for(i=0;i<NWEEKS;i++){
+    id='w'+i; p=POS[id]; st=weekStat(i); cls=weekClass(i);
+    var center=cls==='unplanned'?'?':(st.total===0?'休':st.done+'/'+st.total);
+    var label='第'+(i+1)+'週 '+md(st.ws)+' 起，'+(cls==='unplanned'?'尚未規劃':'完成 '+st.done+' 比 '+st.total);
+    s+='<g class="node '+cls+(isSel('week',i)?' sel':'')+'" data-type="week" data-id="'+i+'" tabindex="0" role="button" aria-label="'+esc(label)+'">'
+      +'<rect class="selring" x="'+(p.x-25)+'" y="'+(p.y-25)+'" width="50" height="50"/>'
+      +'<rect class="nb" x="'+(p.x-20)+'" y="'+(p.y-20)+'" width="40" height="40"/>'
+      +'<text class="nt" x="'+p.x+'" y="'+(p.y-5)+'">'+md(st.ws)+'</text>'
+      +'<text class="nn" x="'+p.x+'" y="'+(p.y+13)+'">'+center+'</text></g>';
+  }
+  RACES.forEach(function(r,k){
+    var gid='g'+(k+1), rid='r'+(k+1), g=gate(r.id), gp=POS[gid], bp=POS[rid], past=r.date<t;
+    s+='<g class="node '+(g.open?'ok':'lockd')+(isSel('gate',r.id)?' sel':'')+'" data-type="gate" data-id="'+r.id+'" tabindex="0" role="button" aria-label="'+esc(r.short+'賽前清單，必備 '+g.done+' 比 '+g.total)+'">'
+      +'<rect class="selring" x="'+(gp.x-25)+'" y="'+(gp.y-25)+'" width="50" height="50"/>'
+      +'<rect class="nb" x="'+(gp.x-20)+'" y="'+(gp.y-20)+'" width="40" height="40"/>';
+    // 鎖或鑰匙（像素）
+    if(g.open){
+      s+='<rect class="ink" x="'+(gp.x-5)+'" y="'+(gp.y-14)+'" width="10" height="2"/><rect class="ink" x="'+(gp.x-5)+'" y="'+(gp.y-14)+'" width="2" height="7"/><rect class="ink" x="'+(gp.x-7)+'" y="'+(gp.y-7)+'" width="14" height="10"/>';
+    }else{
+      s+='<rect class="ink" x="'+(gp.x-5)+'" y="'+(gp.y-14)+'" width="10" height="2"/><rect class="ink" x="'+(gp.x-5)+'" y="'+(gp.y-14)+'" width="2" height="7"/><rect class="ink" x="'+(gp.x+3)+'" y="'+(gp.y-14)+'" width="2" height="7"/><rect class="ink" x="'+(gp.x-7)+'" y="'+(gp.y-7)+'" width="14" height="10"/>';
+    }
+    s+='<text class="nn" x="'+gp.x+'" y="'+(gp.y+16)+'">'+g.done+'/'+g.total+'</text></g>';
+    s+='<text class="cap" x="'+gp.x+'" y="'+(gp.y+36)+'">賽前清單</text>';
+    s+='<g class="node boss'+(isSel('race',r.id)?' sel':'')+'" data-type="race" data-id="'+r.id+'" tabindex="0" role="button" aria-label="'+esc(r.name+' '+md(r.date))+'">'
+      +'<rect class="selring" x="'+(bp.x-33)+'" y="'+(bp.y-33)+'" width="66" height="66"/>'
+      +'<rect class="nb" x="'+(bp.x-28)+'" y="'+(bp.y-28)+'" width="56" height="56"/>'
+      +'<rect class="ink" x="'+(bp.x-10)+'" y="'+(bp.y-22)+'" width="3" height="30"/>'
+      +'<rect fill="#e03b3b" x="'+(bp.x-7)+'" y="'+(bp.y-22)+'" width="16" height="3"/><rect fill="#e03b3b" x="'+(bp.x-7)+'" y="'+(bp.y-19)+'" width="12" height="3"/><rect fill="#e03b3b" x="'+(bp.x-7)+'" y="'+(bp.y-16)+'" width="8" height="3"/><rect fill="#e03b3b" x="'+(bp.x-7)+'" y="'+(bp.y-13)+'" width="4" height="3"/>'
+      +'<rect class="ink" x="'+(bp.x-14)+'" y="'+(bp.y+8)+'" width="18" height="3"/>'
+      +'<text class="nt" x="'+bp.x+'" y="'+(bp.y+23)+'">'+md(r.date)+(past?' 已賽':'')+'</text></g>';
+    s+='<text class="cap" x="'+bp.x+'" y="'+(bp.y+44)+'">'+esc(r.short)+'半馬</text>';
+  });
+  var nr=nextRace();
+  if(t<=addDays(START,NWEEKS*7-1)){
+    var rp=POS['w'+c]; s+=sprite(rp.x,rp.y-28,c>=3,todayAct(),sweatLevel());
+  }else{ var lp=POS.r2; s+=sprite(lp.x,lp.y-28,true,'idle',sweatLevel()) }
+  return s+'</svg>';
+}
+
+/* ---------- 版面 ---------- */
+function wDay(d){return wellness.filter(function(x){return x.id===d})[0]}
+function wMissing(w){return !w||w.missing===true||w.hrv==null||!(w.sleepH>0)}
+function wJudge(w){
+  if(wMissing(w)) return 'missing';
+  if(w.rhr>ranges.rhrMax||w.hrv<ranges.hrvMin) return 'out';
+  if(w.rhr>=ranges.rhrMax-1||w.hrv<=ranges.hrvMin+2) return 'near';
+  return 'ok';
+}
+function meter(v,lo,hi,lim,rhr){
+  var pc=function(x){return Math.max(0,Math.min(100,(x-lo)/(hi-lo)*100))};
+  var L=pc(lim), g=rhr?'linear-gradient(90deg,#9fdc8f '+L+'%,#f0a98a '+L+'%)':'linear-gradient(90deg,#f0a98a '+L+'%,#9fdc8f '+L+'%)';
+  return '<div class="mt" style="background:'+g+'" aria-hidden="true"><i class="lim" style="left:'+L+'%"></i>'+(v==null?'':'<i class="val" style="left:'+pc(v)+'%"></i>')+'</div>';
+}
+function spark(key,lo,hi,days,rhr){
+  var h='<div class="spark" aria-hidden="true">';
+  days.forEach(function(d){
+    var w=wDay(d);
+    if(wMissing(w)||w[key]==null){h+='<i class="none"></i>';return}
+    var bad=rhr?(w[key]>ranges.rhrMax):(w[key]<ranges.hrvMin);
+    var p=Math.max(8,Math.min(100,(w[key]-lo)/(hi-lo)*100));
+    h+='<i class="'+(bad?'bad':'')+'" style="height:'+Math.round(p*0.32+4)+'px"></i>';
+  });
+  return h+'</div>';
+}
+function renderBody(){
+  var t=today(), days=[],i;
+  for(i=6;i>=0;i--) days.push(addDays(t,-i));
+  var w=wDay(t), st=wJudge(w), last=null;
+  for(i=0;i<7;i++){var x=wDay(addDays(t,-i)); if(!wMissing(x)){last=x;break}}
+  var labels={ok:'在範圍內',near:'接近邊界',out:'超出範圍',missing:'缺資料'};
+  var show=(st==='missing')?last:w;
+  function ns(v,rhr){ if(st==='missing'||v==null) return 'missing'; if(rhr?(v>ranges.rhrMax):(v<ranges.hrvMin)) return 'out'; return st==='near'?'near':'ok'; }
+  var h='<h2>身體訊號<span class="stt '+st+'">'+labels[st]+'</span></h2>';
+  if(!wellness.length){
+    h+='<div class="bmsg">還沒有同步靜息心率與 HRV。同步後這裡會顯示今天的數值、你設定的範圍。</div>';
+  }else{
+    var tag=(st==='missing'&&last)?'<small>最近有效 '+md(last.id)+'</small>':(st==='missing'?'':'<small>今天</small>');
+    h+='<div class="mrow"><div class="ml">靜息心率</div><div class="mv"><span class="nv n-'+ns(show?show.rhr:null,true)+'">'+(show?show.rhr:'—')+'</span><small>bpm　上限 '+ranges.rhrMax+'</small>'+tag+'</div>'+meter(show?show.rhr:null,44,64,ranges.rhrMax,true)+'</div>';
+    h+='<div class="mrow"><div class="ml">HRV</div><div class="mv"><span class="nv n-'+ns(show?show.hrv:null,false)+'">'+(show&&show.hrv!=null?show.hrv:'—')+'</span><small>ms　下限 '+ranges.hrvMin+'</small>'+tag+'</div>'+meter(show?show.hrv:null,30,70,ranges.hrvMin,false)+'</div>';
+    var msg='';
+    if(st==='missing') msg='今天缺資料：睡眠或 HRV 沒有記錄（例如手錶沒電或沒戴著睡覺）。這時的靜息心率可能是估算值，不能當作放行依據；過幾個小時資料可能會補上。';
+    else if(st==='out') msg='已超出你設定的範圍（'+(w.rhr>ranges.rhrMax?'靜息心率 '+w.rhr+' 高於上限 '+ranges.rhrMax:'HRV '+w.hrv+' 低於下限 '+ranges.hrvMin)+'）。請依今天課表的放行條件處理。';
+    else if(st==='near') msg='接近邊界，今天的課表請留意身體反應。';
+    if(msg) h+='<div class="bmsg" role="status">'+msg+'</div>';
+  }
+  h+='<details class="rg"><summary>調整範圍</summary><div class="rgf"><label>靜息心率上限<input type="number" inputmode="numeric" id="rg-rhr" data-range="rhrMax" min="30" max="120" value="'+ranges.rhrMax+'"'+(canWrite?'':' disabled')+'></label><label>HRV 下限<input type="number" inputmode="numeric" id="rg-hrv" data-range="hrvMin" min="10" max="200" value="'+ranges.hrvMin+'"'+(canWrite?'':' disabled')+'></label></div><p style="margin-top:6px">範圍預設取自課表的放行條件。資料來自 intervals.icu；睡眠為 0 或沒有 HRV 的日子視為缺資料，不參與判斷。地圖上的角色會依這裡的狀態流汗：接近邊界 1 滴，超出範圍 3 滴；缺資料不流汗。</p></details>';
+  $('body').innerHTML=h;
+}
+function renderHud(){
+  var p=prep(), nr=nextRace(), pct=p.due?Math.round(p.done/p.due*100):null;
+  var h='';
+  h+='<div class="tile"><div class="lab">下一關</div><div class="val">'+(nr?esc(nr.short)+'　'+Math.max(0,diff(today(),nr.date))+' 天':'全數完賽')+'</div><div class="sub">'+(nr?esc(nr.name)+' '+md(nr.date):'')+'</div></div>';
+  h+='<div class="tile"><div class="lab">準備度</div><div class="val">'+(pct==null?'—':pct+'%')+'</div><div class="bar" aria-hidden="true"><i style="width:'+(pct||0)+'%"></i></div><div class="sub">到期課表 '+p.done+'/'+p.due+'，已規劃 '+p.planned+'/'+NWEEKS+' 週</div></div>';
+  h+='<div class="tile"><div class="lab">關鍵課表</div><div class="val">'+p.kd+'/'+p.keys+'</div><div class="sub">到期的關鍵課表達成</div></div>';
+  h+='<div class="tile"><div class="lab">連續達成</div><div class="val">'+p.streak+' 週</div><div class="sub">完成率達 80% 的週</div></div>';
+  $('hud').innerHTML=h;
+}
+function renderPanel(){
+  var h='';
+  if(sel.type==='week'){
+    var i=+sel.id, st=weekStat(i), t=today(), c=curIdx();
+    var tag=(i===c&&t>=START&&t<=wEnd(NWEEKS-1))?'<span class="tag">本週</span>':(st.we<t?'<span class="tag alt">已結束</span>':'');
+    var wn=WEEKNOTE[i]?'<span class="tag alt">'+WEEKNOTE[i]+'</span>':'';
+    h+='<h2>第'+(i+1)+'週　'+md(st.ws)+' – '+md(st.we)+tag+wn+'</h2>';
+    h+='<p class="meta">'+(st.total?'完成 '+st.done+' / '+st.total+'（休息日不計）':'這週還沒有課表')+'</p>';
+    if(!st.items.length&&!st.extra.length){
+      h+='<div class="empty">尚未規劃，不算缺漏。排好這週的課表後，用下方的表單加入，或把課表貼給 Claude 幫你輸入。</div>';
+    }else{
+      var items=st.items.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.title<b.title?-1:1)});
+      h+='<ul class="list">';
+      items.forEach(function(w){
+        var rest=w.kind==='休息';
+        h+='<li class="row'+(w.done?' is-done':'')+'">';
+        h+=rest?'<span class="chk" style="visibility:hidden"></span>':'<button class="chk" data-act="toggle-workout" data-id="'+esc(w.id)+'" aria-pressed="'+(w.done?'true':'false')+'" aria-label="標記完成：'+esc(w.title)+'"></button>';
+        h+='<div class="rmain"><div class="rt">'+(w.key?'<span class="key" title="關鍵課表">★</span>':'')+(w.desc?'<button type="button" class="dlink" data-act="toggle-desc" data-id="'+esc(w.id)+'" aria-expanded="'+(openDesc[w.id]?'true':'false')+'"><span class="car" aria-hidden="true">'+(openDesc[w.id]?'▾':'▸')+'</span>'+esc(w.title)+'</button>':esc(w.title))+'</div><div class="rm">'+md(w.date)+'（'+wk(w.date)+'）'+esc(w.kind||'')+(w.mins?'　'+w.mins+' 分':'')+'</div>'+(w.desc&&openDesc[w.id]?'<div class="desc">'+esc(w.desc)+'</div>':'')+'</div>';
+        h+='<button class="mini'+(confirmDel===w.id?' warn':'')+'" data-act="del-workout" data-id="'+esc(w.id)+'"'+(canWrite?'':' disabled')+'>'+(confirmDel===w.id?'確定刪除？':'刪除')+'</button></li>';
+      });
+      h+='</ul>';
+    }
+    if(st.extra.length){
+      h+='<h3 style="font-family:var(--font-display);font-size:12px;margin:14px 0 6px">計畫外（不計入準備度）</h3><ul class="list">';
+      st.extra.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.title<b.title?-1:1)}).forEach(function(w){
+        h+='<li class="row"><span class="chk" style="visibility:hidden"></span>';
+        h+='<div class="rmain"><div class="rt"><span class="req sug">計畫外</span>'+esc(w.title)+'</div><div class="rm">'+md(w.date)+'（'+wk(w.date)+'）'+esc(w.kind||'')+(w.note?'　'+esc(w.note):'')+'</div></div>';
+        h+='<button class="mini'+(confirmDel===w.id?' warn':'')+'" data-act="del-workout" data-id="'+esc(w.id)+'">'+(confirmDel===w.id?'確定刪除？':'刪除')+'</button></li>';
+      });
+      h+='</ul>';
+    }
+  }else if(sel.type==='gate'){
+    var r=race(sel.id), g=gate(r.id);
+    h+='<h2>'+esc(r.short)+'半馬　賽前清單'+'<span class="tag'+(g.open?'':' alt')+'">'+(g.open?'鑰匙已齊':'必備 '+g.done+'/'+g.total)+'</span></h2>';
+    h+='<p class="meta">必備項全部確認，才能進入比賽關卡；建議項只提醒。</p><ul class="list">';
+    itemsFor(r.id).forEach(function(x){
+      var d=isDone(r.id,x.key);
+      h+='<li class="row'+(d?' is-done':'')+'"><button class="chk" data-act="toggle-check" data-race="'+r.id+'" data-key="'+esc(x.key)+'" aria-pressed="'+(d?'true':'false')+'" aria-label="確認：'+esc(x.label)+'"'+(canWrite?'':' disabled')+'></button>'
+        +'<div class="rmain"><div class="rt"><span class="req'+(x.req?'':' sug')+'">'+(x.req?'必備':'建議')+'</span>'+esc(x.label)+'</div></div>';
+      if(x.custom) h+='<button class="mini" data-act="del-custom" data-id="'+esc(x.key)+'"'+(canWrite?'':' disabled')+'>移除</button>';
+      h+='</li>';
+    });
+    h+='</ul>';
+    if(canWrite){
+      h+='<div class="fld"><label for="ci-label">新增項目</label><input type="text" id="ci-label" maxlength="60" placeholder="例如 號碼布別針、能量膠數量"></div>';
+      h+='<div class="row" style="margin-top:8px;background:none;border:none;padding:0"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ci-req" checked style="width:20px;height:20px;accent-color:var(--track)">必備項</label><button class="btn ghost" data-act="add-custom" data-race="'+r.id+'" style="margin-left:auto">加入清單</button></div>';
+    }
+  }else{
+    var rr=race(sel.id), gg=gate(rr.id), cf=cfg[rr.id]||{}, days=diff(today(),rr.date);
+    var tt=parseTime(cf.target), pace=(tt&&!isNaN(tt))?paceStr(tt):'';
+    h+='<h2>'+esc(rr.name)+'<span class="tag">'+(days>0?'倒數 '+days+' 天':(days===0?'就是今天':'已賽'))+'</span></h2>';
+    h+='<p class="meta">'+md(rr.date)+'（'+wk(rr.date)+'）　'+esc(rr.place)+'</p>';
+    h+='<p class="meta">關卡鑰匙：必備 '+gg.done+'/'+gg.total+(gg.open?'，可以出發':'，尚未齊') +'　<button class="mini" data-act="goto-gate" data-race="'+rr.id+'">看清單</button></p>';
+    h+='<div class="fld"><label for="tg-time">目標完賽時間（時:分:秒）</label><input type="text" id="tg-time" data-race="'+rr.id+'" data-field="target" inputmode="numeric" value="'+esc(cf.target||'')+'" placeholder="例如 1:55:00"'+(canWrite?'':' disabled')+'><div class="pace">'+(pace?'目標配速 '+pace:'')+'</div></div>';
+    h+='<div class="fld"><label for="tg-strat">策略（配速分段、補給）</label><input type="text" id="tg-strat" data-race="'+rr.id+'" data-field="strategy" maxlength="120" value="'+esc(cf.strategy||'')+'" placeholder="例如 前 10K 保守，後段加速"'+(canWrite?'':' disabled')+'></div>';
+    h+='<div class="fld"><label for="tg-body">賽前身體狀況的期望（自己的感受）</label><input type="text" id="tg-body" data-race="'+rr.id+'" data-field="body" maxlength="120" value="'+esc(cf.body||'')+'" placeholder="例如 無痠痛、睡滿 7 小時"'+(canWrite?'':' disabled')+'></div>';
+    h+='<div class="empty">賽後在這裡逐項記錄完賽、成績、配速、策略、身體狀況，並跟上面的目標比對。這一塊在下一版加入。</div>';
+  }
+  $('panel').innerHTML=h;
+}
+function renderNudge(){
+  var c=curIdx(), n=$('nudge');
+  var nxt=c+1<NWEEKS?weekStat(c+1):null;
+  if(nxt&&!nxt.items.length&&today()<=wEnd(NWEEKS-1)){
+    n.hidden=false;
+    n.innerHTML='下週（'+md(nxt.ws)+' 起）還沒有課表。排好以後，點路線圖上的那一週，用表單加入，或貼給 Claude 幫你輸入。';
+  }else n.hidden=true;
+}
+function syncForm(){
+  var f=$('addForm');
+  f.hidden=!(sel.type==='week'&&canWrite);
+  if(sel.type!=='week') return;
+  var i=+sel.id, ws=wStart(i), we=wEnd(i), d=$('f-date'), t=today();
+  d.min=ws; d.max=we;
+  if(!d.value||d.value<ws||d.value>we) d.value=(t>=ws&&t<=we)?t:ws;
+}
+function render(){
+  if(!sel) sel={type:'week',id:String(curIdx())};
+  renderHud();
+  renderBody();
+  $('map').innerHTML=buildMap();
+  renderPanel();
+  syncForm();
+  renderNudge();
+  var note=$('note');
+  if(!db&&loaded===false&&window.__dbDone){note.hidden=false;note.textContent='目前沒有連上資料庫，只能看版面，無法儲存。'}
+  else if(!canWrite){note.hidden=false;note.textContent='目前只能檢視，無法修改資料。'}
+  else if(window.__slow&&!loaded){note.hidden=false;note.textContent='資料還沒有回應，目前畫面可能不是最新的。'}
+  else note.hidden=true;
+}
+function renderAll(){
+  var a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')&&a.closest&&a.closest('#panel,#body')){pendingRender=true;return}
+  render();
+}
+document.addEventListener('focusout',function(){
+  if(pendingRender){pendingRender=false;setTimeout(renderAll,0)}
+});
+
+/* ---------- 寫入 ---------- */
+var toastT=null;
+function toast(msg){
+  var t=$('toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(toastT); toastT=setTimeout(function(){t.hidden=true},2800);
+}
+function guard(){
+  if(!db){toast('目前無法儲存：沒有連上資料庫');return false}
+  if(!canWrite){toast('目前只能檢視');return false}
+  return true;
+}
+function onWriteErr(e){
+  if(e&&e.code==='invalid_argument'){canWrite=false;toast('沒有修改權限，改為檢視模式')}
+  else if(e&&e.code==='quota_exceeded'){toast('資料已達上限，請先刪除一些項目')}
+  else toast('沒有存成功，請再試一次');
+  renderAll();
+}
+function enqueue(fn){chain=chain.then(fn).catch(onWriteErr);return chain}
+function logEvent(type,label,extra){
+  return db.collection('events').add(Object.assign({t:new Date().toISOString(),type:type,label:label},extra||{}));
+}
+
+function toggleWorkout(id){
+  var w=workouts.filter(function(x){return x.id===id})[0];
+  if(!w||!guard()) return;
+  var nd=!w.done, at=nd?new Date().toISOString():null;
+  w.done=nd; w.doneAt=at; renderAll(); toast(nd?'已標記完成':'已取消完成');
+  enqueue(function(){
+    return db.collection('workouts').doc(id).update({done:nd,doneAt:at}).then(function(){
+      if(nd&&w.key) return logEvent('key_workout_done',w.title,{date:w.date});
+    });
+  });
+}
+function delWorkout(id){
+  if(!guard()) return;
+  if(confirmDel!==id){confirmDel=id;renderAll();setTimeout(function(){if(confirmDel===id){confirmDel=null;renderAll()}},4000);return}
+  confirmDel=null;
+  workouts=workouts.filter(function(x){return x.id!==id}); renderAll();
+  enqueue(function(){return db.collection('workouts').doc(id).delete()});
+}
+function toggleCheck(r,k){
+  if(!guard()) return;
+  var key=r+'__'+k, nd=!isDone(r,k), at=nd?new Date().toISOString():null;
+  checks[key]={race:r,item:k,done:nd,doneAt:at}; renderAll();
+  var it=itemsFor(r).filter(function(x){return x.key===k})[0];
+  enqueue(function(){
+    return db.collection('checks').doc(key).set({race:r,item:k,done:nd,doneAt:at}).then(function(){
+      if(nd&&it&&it.req) return logEvent('required_check_done',it.label,{race:r});
+    });
+  });
+}
+function addCustom(r){
+  if(!guard()) return;
+  var inp=$('ci-label'), label=inp.value.trim();
+  if(!label){toast('請輸入項目名稱');return}
+  var req=$('ci-req').checked; inp.value='';
+  enqueue(function(){return db.collection('checkitems').add({race:r,label:label,required:req})});
+}
+function delCustom(id){
+  if(!guard()) return;
+  customItems=customItems.filter(function(c){return c.id!==id}); renderAll();
+  enqueue(function(){return db.collection('checkitems').doc(id).delete()});
+}
+function saveRange(field,val){
+  if(!guard()) return;
+  var n=Number(val), lim={rhrMax:[30,120],hrvMin:[10,200]}[field];
+  if(!isFinite(n)||val===''||n<lim[0]||n>lim[1]){toast('數值要在 '+lim[0]+' 到 '+lim[1]+' 之間');renderAll();return}
+  if(ranges[field]===n) return;
+  ranges[field]=n; var snap=Object.assign({},ranges); renderAll();
+  enqueue(function(){return db.doc('config/ranges').set(snap).then(function(){toast('範圍已更新')})});
+}
+function saveCfg(r,field,val){
+  if(!guard()) return;
+  if(field==='target'){
+    var t=parseTime(val);
+    if(val.trim()&&(t===null||isNaN(t))){toast('時間格式請用 1:55:00');return}
+  }
+  var cur=cfg[r]||{};
+  if((cur[field]||'')===val.trim()) return;
+  var o=Object.assign({},cur); o[field]=val.trim(); cfg[r]=o;
+  var snap=JSON.parse(JSON.stringify(cfg));
+  renderAll();
+  enqueue(function(){
+    return db.doc('config/races').set(snap).then(function(){
+      if(field==='target') return logEvent('target_set',val.trim(),{race:r});
+    });
+  });
+}
+
+/* ---------- 事件 ---------- */
+function selectNode(type,id){
+  sel={type:type,id:String(id)}; confirmDel=null; render();
+  $('panel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
+}
+document.addEventListener('click',function(e){
+  var n=e.target.closest&&e.target.closest('.node');
+  if(n){selectNode(n.getAttribute('data-type'),n.getAttribute('data-id'));return}
+  var b=e.target.closest&&e.target.closest('[data-act]');
+  if(!b) return;
+  var a=b.getAttribute('data-act');
+  if(a==='toggle-desc'){var di=b.getAttribute('data-id');openDesc[di]=!openDesc[di];renderAll()}
+  else if(a==='toggle-workout') toggleWorkout(b.getAttribute('data-id'));
+  else if(a==='del-workout') delWorkout(b.getAttribute('data-id'));
+  else if(a==='toggle-check') toggleCheck(b.getAttribute('data-race'),b.getAttribute('data-key'));
+  else if(a==='add-custom') addCustom(b.getAttribute('data-race'));
+  else if(a==='del-custom') delCustom(b.getAttribute('data-id'));
+  else if(a==='goto-gate') selectNode('gate',b.getAttribute('data-race'));
+});
+document.addEventListener('keydown',function(e){
+  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('node')){
+    e.preventDefault(); selectNode(e.target.getAttribute('data-type'),e.target.getAttribute('data-id'));
+  }
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.getAttribute&&t.getAttribute('data-range')){saveRange(t.getAttribute('data-range'),t.value);return}
+  if(t.getAttribute&&t.getAttribute('data-field')) saveCfg(t.getAttribute('data-race'),t.getAttribute('data-field'),t.value);
+});
+$('addForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  if(!guard()) return;
+  var date=$('f-date').value, title=$('f-title').value.trim();
+  if(!date||!title){toast('請填日期與課表名稱');return}
+  if(sel&&sel.type==='week'){var wi0=+sel.id;if(date<wStart(wi0)||date>wEnd(wi0)){toast('日期要落在這週（'+wStart(wi0).slice(5)+' – '+wEnd(wi0).slice(5)+'）');return}}
+  var rec={date:date,title:title,kind:$('f-kind').value,key:$('f-key').checked,done:false,doneAt:null,createdAt:new Date().toISOString()};
+  $('f-title').value=''; $('f-key').checked=false;
+  enqueue(function(){
+    return db.collection('workouts').add(rec).then(function(){
+      var wi=Math.floor(diff(START,rec.date)/7);
+      if(wi>=0&&wi<NWEEKS){sel={type:'week',id:String(wi)};render()}
+      toast('已加入：'+rec.title);
+      return logEvent('workout_added',rec.title,{date:rec.date});
+    });
+  });
+});
+
+/* ---------- 啟動 ---------- */
+
+/* ---------- 今日圖卡（畫成 1080×1920 的 PNG，不含任何數字型身體資料） ---------- */
+var shotUrl=null, shotBlob=null;
+function metricSt(w){
+  if(wMissing(w)) return {rhr:'missing',hrv:'missing'};
+  return {rhr:w.rhr>ranges.rhrMax?'out':(w.rhr>=ranges.rhrMax-1?'near':'ok'),
+          hrv:w.hrv<ranges.hrvMin?'out':(w.hrv<=ranges.hrvMin+2?'near':'ok')};
+}
+function cardData(){
+  var t=today();
+  var tw=workouts.filter(function(x){return !x.unplanned&&x.date===t&&x.kind!=='休息'})[0]||null;
+  var ex=workouts.filter(function(x){return x.unplanned&&x.date===t}).map(function(x){
+    var parts=String(x.note||'').split('・').filter(function(p){return /km|公里|分/.test(p)&&!/心率|負荷/.test(p)});
+    return x.title+(parts.length?'（'+parts.join('・')+'）':'');
+  });
+  var c=curIdx(), ws=weekStat(c), nr=nextRace();
+  return {t:t,w:tw,extras:ex,weekNo:c+1,week:ws,race:nr,days:nr?diff(t,nr.date):null,body:metricSt(wDay(t)),sweat:sweatLevel(),act:todayAct()};
+}
+function cfit(ctx,text,maxW,size,font){
+  var z=size; ctx.font=z+'px '+font;
+  while(ctx.measureText(text).width>maxW&&z>10){z--;ctx.font=z+'px '+font}
+  return text;
+}
+function drawCard(D){
+  var cv=document.createElement('canvas'); cv.width=1080; cv.height=1920;
+  var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.scale(3,3);
+  var INK='#13203d', MUTED='#46567a', DISP='"Press Start 2P","DotGothic16",monospace', BODY='"DotGothic16","Noto Sans TC","PingFang TC",sans-serif';
+  ctx.fillStyle='#f8fbff'; ctx.fillRect(0,0,360,640);
+  ctx.textBaseline='alphabetic';
+  ctx.fillStyle=INK; ctx.font='22px '+DISP; ctx.fillText("TODAY'S QUEST",16,46);
+  ctx.fillStyle=MUTED; ctx.font='14px '+BODY; ctx.fillText(md(D.t)+'（'+wk(D.t)+'）',16,70);
+  ctx.fillStyle=INK; ctx.fillRect(0,84,360,3);
+  // 場景：180×94，放大 2 倍
+  ctx.save(); ctx.translate(0,87); ctx.scale(2,2); ctx.beginPath(); ctx.rect(0,0,180,94); ctx.clip();
+  function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
+  R(0,0,180,33,'#9fd6f2'); R(0,33,180,61,'#62c254');
+  [40,60,80].forEach(function(y){R(0,y,180,8,'#52ad46')});
+  function tr(x,y){R(x+4,y+12,4,8,'#7a4a2a');R(x,y+4,12,8,'#2f7d3d');R(x+2,y,8,6,'#2f7d3d')}
+  tr(12,22); tr(152,28);
+  R(0,76,180,14,'#d8572a');
+  var A=ACT.a[D.act]||ACT.a.idle, K=2, sx=90-A.w*K/2, sy=80-A.h*K+8;
+  var fi=D.act==='run'?1:0; if(fi>=A.f.length) fi=0;
+  A.f[fi].forEach(function(r){R(sx+r[1]*K,sy+r[0]*K,r[2]*K,K,'#'+ACT.p[r[3]])});
+  var P=(SWEAT[D.act]||SWEAT.idle).slice(0,D.sweat), u=2;
+  function dshape(x,y,fill,dark,tip){
+    DROP.forEach(function(row,ry){for(var cx=0;cx<row.length;cx++){var ch=row.charAt(cx); if(ch==='.') continue; R(x+cx*u,y+ry*u,u,u,ch==='c'?dark:(ch==='a'?tip:fill))}});
+  }
+  P.forEach(function(p){
+    var x=sx+p[0]*K, y=sy+p[1]*K+4;
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(function(d){dshape(x+d[0],y+d[1],'#1d4f8c','#1d4f8c','#1d4f8c')});
+    dshape(x,y,'#7cc4f0','#4a9ad8','#7cc4f0'); R(x+u,y+3*u,u,u,'#f2fbff');
+  });
+  ctx.restore();
+  ctx.fillStyle=INK; ctx.fillRect(0,275,360,3);
+  var y0=278;
+  function secTitle(txt,y){ctx.fillStyle=INK;ctx.font='bold 13px '+BODY;ctx.fillText(txt,16,y)}
+  function dash(y){ctx.fillStyle=INK;for(var x=16;x<344;x+=8) ctx.fillRect(x,y,4,2)}
+  // 今天的課表
+  secTitle('今天的課表',y0+22);
+  if(D.w){
+    ctx.fillStyle='#dcecf8'; ctx.fillRect(16,y0+34,30,26); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.strokeRect(17,y0+35,28,24);
+    ctx.fillStyle=INK; ctx.font='16px '+BODY; ctx.textAlign='center'; ctx.fillText(D.w.kind,31,y0+53); ctx.textAlign='left';
+    var tt=cfit(ctx,D.w.title,288,16,BODY); ctx.fillStyle=INK; ctx.fillText(tt,56,y0+53);
+    ctx.fillStyle=MUTED; ctx.font='13px '+BODY; ctx.fillText('計畫 '+D.w.mins+' 分',16,y0+76);
+    var lab=D.w.done?'完成':'還沒完成', cw=ctx.measureText(lab).width+16;
+    if(D.w.done){ctx.fillStyle='#62c254';ctx.fillRect(16,y0+84,cw,22);ctx.fillStyle='#0b2b10'}
+    else{ctx.fillStyle='#ffffff';ctx.fillRect(16,y0+84,cw,22);ctx.fillStyle=INK}
+    ctx.strokeStyle=INK; ctx.lineWidth=2; if(!D.w.done) ctx.setLineDash([4,3]); ctx.strokeRect(17,y0+85,cw-2,20); ctx.setLineDash([]);
+    ctx.fillText(lab,24,y0+99);
+  }else{
+    ctx.fillStyle=INK; ctx.font='16px '+BODY; ctx.fillText('今天休息',16,y0+54);
+  }
+  if(D.extras.length){
+    ctx.fillStyle=MUTED; ctx.font='12px '+BODY;
+    var et=cfit(ctx,'另外完成：'+D.extras.join('、'),328,12,BODY); ctx.fillText(et,16,y0+122);
+  }
+  dash(y0+130);
+  // 備賽進度
+  var y1=y0+130;
+  secTitle('備賽進度',y1+20);
+  ctx.fillStyle=INK; ctx.font='20px '+BODY; ctx.fillText('第 '+D.weekNo+' 週 / '+NWEEKS,16,y1+46);
+  ctx.fillStyle=MUTED; ctx.font='13px '+BODY;
+  ctx.fillText(D.race?'距離 '+D.race.name+' 還有 '+D.days+' 天':'比賽都完成了',16,y1+66);
+  ctx.fillText('本週完成 '+D.week.done+' / '+D.week.total,16,y1+88);
+  var n=Math.max(D.week.total,1), pw=Math.min(22,Math.floor((328-4*(n-1))/n));
+  for(var i=0;i<D.week.total;i++){
+    var px=16+i*(pw+4);
+    ctx.fillStyle=i<D.week.done?'#62c254':'#ffffff'; ctx.fillRect(px,y1+96,pw,14);
+    ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.strokeRect(px+1,y1+97,pw-2,12);
+  }
+  dash(y1+128);
+  // 身體訊號
+  var y2=y1+128;
+  secTitle('身體訊號',y2+20);
+  var LBL={ok:'在範圍內',near:'接近邊界',out:'超出範圍',missing:'今天還沒資料'}, COL={ok:'#4cc23f',near:'#f2c230',out:'#ee3b3b',missing:'#ffffff'};
+  [['靜息心率','rhr',16],['HRV','hrv',186]].forEach(function(m){
+    var st=D.body[m[1]], x=m[2];
+    ctx.fillStyle='#dcecf8'; ctx.fillRect(x,y2+28,158,34); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.strokeRect(x+1,y2+29,156,32);
+    ctx.fillStyle=COL[st]; ctx.fillRect(x+8,y2+36,18,18); ctx.strokeRect(x+9,y2+37,16,16);
+    ctx.fillStyle=INK; ctx.font='12px '+BODY; ctx.fillText(m[0],x+34,y2+43);
+    ctx.fillStyle=MUTED; ctx.font='12px '+BODY; ctx.fillText(LBL[st],x+34,y2+56);
+  });
+  ctx.fillStyle=MUTED; ctx.font='10px '+BODY; ctx.fillText('綠＝在自己設的範圍內　紅＝超出　白＝還沒資料。紅色時角色會流汗。',16,y2+76);
+  ctx.fillStyle=INK; ctx.fillRect(0,y2+82,360,3);
+  ctx.fillStyle=MUTED; ctx.font='11px '+BODY; ctx.fillText('雙半馬冒險路線',16,y2+98); ctx.textAlign='right'; ctx.fillText('原創像素風',344,y2+98); ctx.textAlign='left';
+  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.strokeRect(2,2,356,636);
+  return cv;
+}
+async function makeShot(){
+  var b=$('shotGen'); b.disabled=true; b.textContent='產生中…';
+  try{
+    try{ await Promise.all([document.fonts.load('22px "Press Start 2P"',"TODAY'S QUEST"),document.fonts.load('16px "DotGothic16"','今天課表完成0123456789')]) }catch(e){}
+    var cv=drawCard(cardData());
+    var blob=await new Promise(function(res){cv.toBlob(res,'image/png')});
+    if(!blob) throw new Error('toBlob');
+    if(shotUrl) URL.revokeObjectURL(shotUrl);
+    shotBlob=blob; shotUrl=URL.createObjectURL(blob);
+    $('shotImg').src=shotUrl; $('shotOut').hidden=false;
+    var dl=null; try{ dl=(window.claude&&window.claude.use)?await window.claude.use('downloads'):null }catch(e){dl=null}
+    $('shotSave').hidden=!dl;
+    toast('圖片已產生');
+  }catch(e){ toast('產生圖片失敗，請再按一次') }
+  b.disabled=false; b.textContent='重新產生圖片';
+}
+async function saveShot(){
+  if(!shotBlob) return;
+  try{
+    var dl=await window.claude.use('downloads'); if(!dl){toast('這裡無法直接儲存，請長按圖片');return}
+    await dl.save({filename:'今天做了什麼_'+today()+'.png',data:shotBlob});
+  }catch(e){ if(!e||e.code!=='declined') toast('無法直接儲存，請長按圖片') }
+}
+$('shotGen').addEventListener('click',makeShot);
+$('shotSave').addEventListener('click',saveShot);
+function onSnapErr(e){
+  if(e&&e.code==='revoked'){db=null;canWrite=false}
+  window.__slow=true; renderAll();
+}
+function got(s){
+  if(!s.metadata.fromCache){loaded=true;clearTimeout(window.__slowT);window.__slow=false}
+}
+async function boot(){
+  render();
+  var d=null;
+  try{ d=(window.claude&&window.claude.use)?await window.claude.use('db'):null }catch(e){d=null}
+  window.__dbDone=true;
+  db=d;
+  if(!db){render();return}
+  try{
+    var u=await window.claude.use('user');
+    if(u&&u.can){var cw=await u.can('data.write'); if(cw===false) canWrite=false}
+  }catch(e){}
+  window.__slowT=setTimeout(function(){window.__slow=true;renderAll()},10000);
+  db.collection('workouts').onSnapshot(function(s){
+    workouts=s.docs.map(function(x){return Object.assign({id:x.id},x.data())});got(s);renderAll();
+  },onSnapErr);
+  db.collection('checks').onSnapshot(function(s){
+    var m={}; s.docs.forEach(function(x){m[x.id]=x.data()}); checks=m; got(s); renderAll();
+  },onSnapErr);
+  db.collection('checkitems').onSnapshot(function(s){
+    customItems=s.docs.map(function(x){return Object.assign({id:x.id},x.data())}); got(s); renderAll();
+  },onSnapErr);
+  db.collection('wellness').onSnapshot(function(s){
+    wellness=s.docs.map(function(x){return Object.assign({id:x.id},x.data())});got(s);renderAll();
+  },onSnapErr);
+  db.doc('config/ranges').onSnapshot(function(s){
+    var d=s.exists?(s.data()||{}):{};
+    ranges={rhrMax:Number(d.rhrMax)||56,hrvMin:Number(d.hrvMin)||43}; got(s); renderAll();
+  },onSnapErr);
+  db.doc('config/races').onSnapshot(function(s){
+    cfg=s.exists?(s.data()||{}):{}; got(s); renderAll();
+  },onSnapErr);
+}
+boot();
+})();
+</script>

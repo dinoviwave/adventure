@@ -1,0 +1,26 @@
+{
+  "name": "adventure",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "dev:demo": "wrangler dev -c wrangler.demo.toml --inspector-port 9230",
+    "build:demo": "python3 scripts/build_demo.py",
+    "db:local": "wrangler d1 migrations apply adventure --local",
+    "deploy": "wrangler deploy",
+    "deploy:demo": "wrangler deploy -c wrangler.demo.toml"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
+  },
+  "type": "module"
+}

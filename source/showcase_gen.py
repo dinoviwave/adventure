@@ -1,0 +1,18 @@
+import json,re,sys
+src=open('/home/claude/adventure.html',encoding='utf-8').read()
+L=src.split('\n')
+def grab(start_pat,end_pat):
+    i=next(k for k,l in enumerate(L) if l.startswith(start_pat))
+    j=next(k for k,l in enumerate(L) if k>i and l.startswith(end_pat))
+    return '\n'.join(L[i:j])
+act=next(l for l in L if l.startswith('var ACT='))
+kind=next(l for l in L if l.startswith('var KIND2ACT'))
+sw=next(l for l in L if l.startswith('var SWEAT='))
+spr=grab('var DROP=','function tree(')
+sprite='\n'.join([act,kind,sw,spr])
+snap=json.load(open('snapshot.json',encoding='utf-8'))
+t=open('template.html',encoding='utf-8').read()
+out=t.replace('__TITLE__','今天做了什麼').replace('__SNAP__',json.dumps(snap,ensure_ascii=False)).replace('__SPRITE__',sprite)
+open('showcase.html','w',encoding='utf-8').write(out)
+open('showcase_doc.html','w',encoding='utf-8').write('<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>'+out+'</body></html>')
+print(len(out))

@@ -1,0 +1,26 @@
+name = "adventure"
+main = "src/full.js"
+compatibility_date = "2026-01-01"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "adventure"
+database_id = "REPLACE_WITH_D1_ID"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 23 * * *", "0 14 * * *"]   # 台北 07:00 與 22:00（UTC 23:00、14:00）
+
+[vars]
+ICU_ATHLETE_ID = "i572505"
+ICU_BASE_URL = "https://intervals.icu/api/v1"
+ACCESS_TEAM_DOMAIN = ""      # 例：yourteam.cloudflareaccess.com
+ACCESS_AUD = ""              # Access 應用程式的 AUD tag
+EDITOR_EMAILS = ""           # Dino 的 email（逗號分隔）
+VIEWER_EMAILS = ""           # 太太等只讀者

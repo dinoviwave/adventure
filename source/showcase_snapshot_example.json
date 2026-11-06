@@ -1,0 +1,25 @@
+{
+ "date": "2026-11-06",
+ "weekNo": 1,
+ "weeks": 7,
+ "race": {
+  "name": "南山人壽半馬",
+  "date": "2026-11-22"
+ },
+ "workout": {
+  "kind": "跑",
+  "title": "南山銳1_FRI_CP測試",
+  "mins": 50,
+  "done": false,
+  "actual": null
+ },
+ "extras": [],
+ "week": {
+  "done": 3,
+  "total": 5
+ },
+ "body": {
+  "rhr": "missing",
+  "hrv": "missing"
+ }
+}
