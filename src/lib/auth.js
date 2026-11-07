@@ -33,7 +33,7 @@ export async function verifyAccessJwt(token, env) {
 const list = (s) => String(s || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
 
 // 回傳 {email, role} 或 {reason}（未通過）。reason 只給診斷用，不含 email 或設定內容：
-// config（Worker 變數沒設）、no_jwt（沒帶 Access 憑證）、bad_jwt（憑證驗證失敗）、not_listed（email 不在名單）。
+// bad_jwt:xxx 的 xxx 為失敗步驟（jwks、kid、sig、aud、iss、exp、alg、format）。config（Worker 變數沒設）、no_jwt（沒帶 Access 憑證）、bad_jwt（憑證驗證失敗）、not_listed（email 不在名單）。
 export async function authenticate(request, env) {
   let email;
   if (!env.ACCESS_TEAM_DOMAIN) {
@@ -43,7 +43,7 @@ export async function authenticate(request, env) {
   } else {
     const tok = request.headers.get('Cf-Access-Jwt-Assertion');
     if (!tok) return { reason: 'no_jwt' };
-    try { const pay = await verifyAccessJwt(tok, env); email = String(pay.email || '').toLowerCase() } catch { return { reason: 'bad_jwt' } }
+    try { const pay = await verifyAccessJwt(tok, env); email = String(pay.email || '').toLowerCase() } catch (e) { return { reason: 'bad_jwt:' + (e && e.message ? String(e.message).slice(0, 12) : 'unknown') } }
   }
   if (list(env.EDITOR_EMAILS).includes(email)) return { email, role: 'editor' };
   if (list(env.VIEWER_EMAILS).includes(email)) return { email, role: 'viewer' };
