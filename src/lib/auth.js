@@ -3,10 +3,13 @@
 const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
 let jwksCache = { at: 0, keys: null };
 
+// 容錯：設定值若多寫了 https:// 或結尾斜線，自動去掉
+export const teamHost = (t) => String(t || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+
 async function getKeys(team) {
   if (jwksCache.keys && Date.now() - jwksCache.at < 3600e3) return jwksCache.keys;
-  const r = await fetch(`https://${team}/cdn-cgi/access/certs`);
-  if (!r.ok) throw new Error('jwks');
+  const r = await fetch(`https://${teamHost(team)}/cdn-cgi/access/certs`);
+  if (!r.ok) throw new Error('jwks ' + r.status);
   jwksCache = { at: Date.now(), keys: (await r.json()).keys };
   return jwksCache.keys;
 }
@@ -25,7 +28,7 @@ export async function verifyAccessJwt(token, env) {
   if (!ok) throw new Error('sig');
   const aud = Array.isArray(pay.aud) ? pay.aud : [pay.aud];
   if (!aud.includes(env.ACCESS_AUD)) throw new Error('aud');
-  if (pay.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) throw new Error('iss');
+  if (pay.iss !== `https://${teamHost(env.ACCESS_TEAM_DOMAIN)}`) throw new Error('iss');
   if (!pay.exp || pay.exp * 1000 < Date.now()) throw new Error('exp');
   return pay;
 }
