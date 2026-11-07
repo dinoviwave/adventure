@@ -5,3 +5,5 @@ node_modules/
 backup/
 docs/shots/*
 !docs/shots/demo.png
+!docs/shots/states_matrix.png
+!docs/shots/card_sample.png
