@@ -214,6 +214,7 @@ details.rules p{margin-top:6px}
 <div id="toast" hidden></div>
 
 <script src="/db-shim.js"></script>
+<script src="/rest-art.js"></script>
 <script>
 (function(){
 'use strict';
@@ -732,6 +733,7 @@ function cfit(ctx,text,maxW,size,font){
 function drawCard(D){
   var cv=document.createElement('canvas'); cv.width=1080; cv.height=1920;
   var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.scale(3,3);
+  var RV=(!D.w&&!D.extras.length&&window.REST_ART)?REST_ART.pick():null, SH=RV?56:0; // 沒有課表：場景改放休息圖（場景加高 56，下方留白同量縮減）
   var INK='#13203d', MUTED='#46567a', DISP='"Press Start 2P","DotGothic16",monospace', BODY='"DotGothic16","Noto Sans TC","PingFang TC",sans-serif';
   ctx.fillStyle='#f8fbff'; ctx.fillRect(0,0,360,640);
   ctx.textBaseline='alphabetic';
@@ -739,8 +741,13 @@ function drawCard(D){
   ctx.fillStyle=MUTED; ctx.font='14px '+BODY; ctx.fillText(md(D.t)+'（'+wk(D.t)+'）',16,70);
   ctx.fillStyle=INK; ctx.fillRect(0,84,360,3);
   // 場景：180×94，放大 2 倍
-  ctx.save(); ctx.translate(0,87); ctx.scale(2,2); ctx.beginPath(); ctx.rect(0,0,180,94); ctx.clip();
+  ctx.save(); ctx.translate(0,87); ctx.scale(2,2); ctx.beginPath(); ctx.rect(0,0,180,94+SH/2); ctx.clip();
   function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
+  if(RV){
+    R(0,0,180,94+SH/2,'#9fd6f2');
+    var rox=Math.round((180-RV.w)/2), roy=Math.round((94+SH/2-RV.h)/2);
+    RV.f[0].forEach(function(r){R(rox+r[1],roy+r[0],r[2],1,'#'+REST_ART.p[r[3]])});
+  }else{
   R(0,0,180,33,'#9fd6f2'); R(0,33,180,61,'#62c254');
   [40,60,80].forEach(function(y){R(0,y,180,8,'#52ad46')});
   function tr(x,y){R(x+4,y+12,4,8,'#7a4a2a');R(x,y+4,12,8,'#2f7d3d');R(x+2,y,8,6,'#2f7d3d')}
@@ -758,9 +765,10 @@ function drawCard(D){
     [[-1,0],[1,0],[0,-1],[0,1]].forEach(function(d){dshape(x+d[0],y+d[1],'#1d4f8c','#1d4f8c','#1d4f8c')});
     dshape(x,y,'#7cc4f0','#4a9ad8','#7cc4f0'); R(x+u,y+3*u,u,u,'#f2fbff');
   });
+  }
   ctx.restore();
-  ctx.fillStyle=INK; ctx.fillRect(0,275,360,3);
-  var y0=278;
+  ctx.fillStyle=INK; ctx.fillRect(0,275+SH,360,3);
+  var y0=278+SH;
   function secTitle(txt,y){ctx.fillStyle=INK;ctx.font='bold 13px '+BODY;ctx.fillText(txt,16,y)}
   function dash(y){ctx.fillStyle=INK;for(var x=16;x<344;x+=8) ctx.fillRect(x,y,4,2)}
   // 今天的課表
@@ -782,9 +790,9 @@ function drawCard(D){
     ctx.fillStyle=MUTED; ctx.font='12px '+BODY;
     var et=cfit(ctx,'另外完成：'+D.extras.join('、'),328,12,BODY); ctx.fillText(et,16,y0+122);
   }
-  dash(y0+130);
+  dash(y0+130-SH);
   // 備賽進度
-  var y1=y0+130;
+  var y1=y0+130-SH;
   secTitle('備賽進度',y1+20);
   ctx.fillStyle=INK; ctx.font='20px '+BODY; ctx.fillText('第 '+D.weekNo+' 週 / '+NWEEKS,16,y1+46);
   ctx.fillStyle=MUTED; ctx.font='13px '+BODY;

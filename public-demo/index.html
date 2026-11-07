@@ -48,6 +48,7 @@ h1,h2,p{margin:0}
 .rf{opacity:0}
 @media (prefers-reduced-motion:reduce){.sdrop{animation:none!important}.rf{animation:none!important;opacity:0!important}.rf[data-s]{opacity:1!important}}
 </style>
+<script src="/rest-art.js"></script>
 <main class="card" id="card" aria-label="今天做了什麼"></main>
 <script>
 (function(){
@@ -99,6 +100,7 @@ var ACTN={run:'跑步',bike:'騎車',swim:'游泳',idle:'休息'};
 var LBL={ok:'在範圍內',near:'接近邊界',out:'超出範圍',missing:'今天還沒資料'};
 var sweat=0; ['rhr','hrv'].forEach(function(k){var s=SNAP.body[k];if(s==='out')sweat=3;else if(s==='near'&&sweat<1)sweat=1});
 function scene(){
+  if(!w&&window.REST_ART){var v=REST_ART.pick(),ox=Math.round((220-v.w)/2),oy=Math.round((130-v.h)/2),q='<svg viewBox="0 0 220 130" role="img" aria-label="角色正在休息" shape-rendering="crispEdges"><rect class="m-sky" x="0" y="0" width="220" height="130"/>';v.f[0].forEach(function(r){q+='<rect x="'+(r[1]+ox)+'" y="'+(r[0]+oy)+'" width="'+r[2]+'" height="1" fill="#'+REST_ART.p[r[3]]+'"/>'});return q+'</svg>'}
   var s='<svg viewBox="0 0 220 130" role="img" aria-label="角色正在'+ACTN[act]+'" shape-rendering="crispEdges">';
   s+='<rect class="m-sky" x="0" y="0" width="220" height="40"/><rect class="m-grass" x="0" y="40" width="220" height="90"/>';
   for(var y=50;y<130;y+=24) s+='<rect class="m-grass2" x="0" y="'+y+'" width="220" height="10"/>';

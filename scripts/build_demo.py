@@ -14,6 +14,9 @@ sprite = '\n'.join([next(l for l in L if l.startswith('var ACT=')),
                     grab('var DROP=', 'function tree(')])
 t = open(os.path.join(root, 'source/showcase_template.html'), encoding='utf-8').read()
 t = t.replace('__TITLE__', '今天做了什麼').replace('__SPRITE__', sprite)
+t = t.replace('<main class="card" id="card"', '<script src="/rest-art.js"></script>\n<main class="card" id="card"', 1)
+# 沒有課表（休息）時改顯示休息圖
+t = t.replace("function scene(){", "function scene(){\n  if(!w&&window.REST_ART){var v=REST_ART.pick(),ox=Math.round((220-v.w)/2),oy=Math.round((130-v.h)/2),q='<svg viewBox=\"0 0 220 130\" role=\"img\" aria-label=\"角色正在休息\" shape-rendering=\"crispEdges\"><rect class=\"m-sky\" x=\"0\" y=\"0\" width=\"220\" height=\"130\"/>';v.f[0].forEach(function(r){q+='<rect x=\"'+(r[1]+ox)+'\" y=\"'+(r[0]+oy)+'\" width=\"'+r[2]+'\" height=\"1\" fill=\"#'+REST_ART.p[r[3]]+'\"/>'});return q+'</svg>'}", 1)
 assert 'var SNAP=__SNAP__;' in t and t.rstrip().endswith('</script>')
 t = t.replace('var SNAP=__SNAP__;', "fetch('/api/snapshot',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(SNAP){", 1)
 k = t.rindex('})();')
@@ -22,3 +25,12 @@ t = '<!doctype html>\n<html lang="zh-Hant"><head>\n<meta charset="utf-8">\n<meta
 os.makedirs(os.path.join(root, 'public-demo'), exist_ok=True)
 open(os.path.join(root, 'public-demo/index.html'), 'w', encoding='utf-8').write(t)
 print(len(t))
+
+# 休息圖（等角 Q 版，三種配色隨機）：產生 rest-art.js，完整版與展示版共用
+rest = json.load(open(os.path.join(root, 'source/rest_iso/iso_rest.json'), encoding='utf-8'))
+pal = json.load(open(os.path.join(root, 'source/sprite_data.json'), encoding='utf-8'))['palette']
+js = ('/* 由 scripts/build_demo.py 產生，來源 source/rest_iso/iso_rest.json。三種配色，pick() 隨機回傳一種。 */\n'
+      'window.REST_ART={p:' + json.dumps(pal) + ',variants:' + json.dumps(rest['variants'], separators=(',', ':')) +
+      ',pick:function(){var k=Object.keys(this.variants);return this.variants[k[Math.floor(Math.random()*k.length)]]}};\n')
+for d in ('public', 'public-demo'):
+    open(os.path.join(root, d, 'rest-art.js'), 'w', encoding='utf-8').write(js)

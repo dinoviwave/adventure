@@ -35,3 +35,6 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 
 ## 疑難排解：/api/me 回 403
 回應的 `reason` 代表原因：`config`（Worker 變數沒設）、`no_jwt`（Access 沒保護此網址）、`bad_jwt:...`（憑證驗證失敗，後面帶步驟與簽發者）、`not_listed`（email 不在名單）。`ACCESS_TEAM_DOMAIN` 要填 **Access 簽發者網域**（例如 `xxx.cloudflareaccess.com`），不是 Worker 名稱；`ACCESS_AUD` 要填該 Access 應用程式的 AUD tag。更新並部署：`npm run update`。
+
+## 休息圖
+今天沒有課表時，展示版與今日圖卡改顯示休息圖（等角 Q 版，三種配色隨機）。像素資料在 `source/rest_iso/iso_rest.json`，重新產生用 `python3 source/rest_iso/build_iso.py`，再跑 `npm run build:demo` 更新 `rest-art.js`。
