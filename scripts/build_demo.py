@@ -18,6 +18,7 @@ assert 'var SNAP=__SNAP__;' in t and t.rstrip().endswith('</script>')
 t = t.replace('var SNAP=__SNAP__;', "fetch('/api/snapshot',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(SNAP){", 1)
 k = t.rindex('})();')
 t = t[:k] + "}).catch(function(){document.getElementById('card').innerHTML='<div class=\"sec\">資料暫時讀不到，請稍後再試。</div>'});\n})();" + t[k + 5:]
+t = '<!doctype html>\n<html lang="zh-Hant"><head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + t
 os.makedirs(os.path.join(root, 'public-demo'), exist_ok=True)
 open(os.path.join(root, 'public-demo/index.html'), 'w', encoding='utf-8').write(t)
 print(len(t))
