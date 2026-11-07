@@ -3,3 +3,5 @@ seed/
 node_modules/
 .wrangler/
 backup/
+docs/shots/*
+!docs/shots/demo.png
