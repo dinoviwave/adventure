@@ -6,8 +6,8 @@ let jwksCache = { at: 0, keys: null };
 // 容錯：設定值若多寫了 https:// 或結尾斜線，自動去掉
 export const teamHost = (t) => String(t || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 
-async function getKeys(team) {
-  if (jwksCache.keys && Date.now() - jwksCache.at < 3600e3) return jwksCache.keys;
+async function getKeys(team, force = false) {
+  if (!force && jwksCache.keys && Date.now() - jwksCache.at < 3600e3) return jwksCache.keys;
   const r = await fetch(`https://${teamHost(team)}/cdn-cgi/access/certs`, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; adventure-worker)', Accept: 'application/json' } });
   if (!r.ok) throw new Error('jwks ' + r.status);
   jwksCache = { at: Date.now(), keys: (await r.json()).keys };
@@ -20,9 +20,10 @@ export async function verifyAccessJwt(token, env) {
   const head = JSON.parse(new TextDecoder().decode(b64u(h)));
   const pay = JSON.parse(new TextDecoder().decode(b64u(p)));
   if (head.alg !== 'RS256') throw new Error('alg');
-  const keys = await getKeys(env.ACCESS_TEAM_DOMAIN);
-  const jwk = keys.find((k) => k.kid === head.kid);
-  if (!jwk) throw new Error('kid');
+  let keys = await getKeys(env.ACCESS_TEAM_DOMAIN);
+  let jwk = keys.find((k) => k.kid === head.kid);
+  if (!jwk) { keys = await getKeys(env.ACCESS_TEAM_DOMAIN, true); jwk = keys.find((k) => k.kid === head.kid); } // 金鑰輪替：重抓一次
+  if (!jwk) throw new Error(`kid ${String(head.kid).slice(0, 8)} iss=${pay.iss} keys=${keys.map((k) => String(k.kid).slice(0, 8)).join(',')}`);
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(s), new TextEncoder().encode(h + '.' + p));
   if (!ok) throw new Error('sig');
@@ -46,7 +47,7 @@ export async function authenticate(request, env) {
   } else {
     const tok = request.headers.get('Cf-Access-Jwt-Assertion');
     if (!tok) return { reason: 'no_jwt' };
-    try { const pay = await verifyAccessJwt(tok, env); email = String(pay.email || '').toLowerCase() } catch (e) { return { reason: 'bad_jwt:' + (e && e.message ? String(e.message).slice(0, 12) : 'unknown') } }
+    try { const pay = await verifyAccessJwt(tok, env); email = String(pay.email || '').toLowerCase() } catch (e) { return { reason: 'bad_jwt:' + (e && e.message ? String(e.message).slice(0, 120) : 'unknown') } }
   }
   if (list(env.EDITOR_EMAILS).includes(email)) return { email, role: 'editor' };
   if (list(env.VIEWER_EMAILS).includes(email)) return { email, role: 'viewer' };
