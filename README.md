@@ -29,3 +29,6 @@ intervals.icu 重新產生金鑰（舊的立刻失效，其他使用金鑰的流
 
 ## 待查證（開工前規格要求）
 Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron 時區（目前以 UTC 設定）、D1 額度。
+
+## 同步測試（本機）
+`node scripts/mock_intervals.mjs` 啟動模擬 intervals.icu（:8799，金鑰 GOODKEY），`.dev.vars` 加 `ICU_API_KEY=GOODKEY`、`ICU_BASE_URL=http://127.0.0.1:8799`，用 `wrangler dev --test-scheduled` 後 `curl "localhost:8787/__scheduled?cron=0+23+*+*+*"` 觸發。同步必須帶一般 User-Agent（否則 403，見設計文件第八節）。

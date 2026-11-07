@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS sync_log (
   trigger TEXT NOT NULL,               -- cron / request
   range_from TEXT, range_to TEXT,
   added INTEGER DEFAULT 0, updated INTEGER DEFAULT 0, removed INTEGER DEFAULT 0, skipped INTEGER DEFAULT 0,
-  error TEXT
+  error TEXT,
+  detail TEXT                          -- JSON：略過、對不上、警告、失敗項目的清單
 );
 
 CREATE TABLE IF NOT EXISTS sync_requests (

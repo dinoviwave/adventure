@@ -50,6 +50,48 @@ describe('同步', () => {
   });
 });
 
+describe('配對與標記完成', () => {
+  const act = (id, name, type, secs, dist = 5000) => ({ id, start_date_local: '2026-11-05T08:00:00', start_date: '2026-11-05T00:00:00Z', name, type, moving_time: secs, distance: dist });
+  it('名稱不符但同天同類型只有一筆 → 配對並標記完成、記錄 doneAt 與實際值', () => {
+    const r = run({ workouts: [], wellness: [] }, { events: [ev(1, '2026-11-05', 'A_跑步')], activities: [act(9, '晨跑', 'Run', 1900)] });
+    const d = r.ops.upsertWorkouts[0].doc;
+    expect(r.ops.upsertWorkouts).toHaveLength(1);
+    expect(d).toMatchObject({ done: true, doneAt: '2026-11-05T00:00:00Z', actual: { min: 32, km: 5 } });
+  });
+  it('一個課表對到多筆：取時長最接近者，其餘為計畫外', () => {
+    const r = run({ workouts: [], wellness: [] }, { events: [ev(1, '2026-11-05', 'A_跑步')], activities: [act(1, 'A_跑步 前半', 'Run', 600), act(2, 'A_跑步 本體', 'Run', 1800)] });
+    expect(r.ops.upsertWorkouts.find((o) => o.id === 'icu-1').doc.actual.min).toBe(30);
+    expect(r.ops.upsertWorkouts.find((o) => o.id === 'icu-act-1').doc.unplanned).toBe(true);
+  });
+  it('部分讀取失敗（events 為 null）：不產生刪除', () => {
+    const ex = { workouts: [{ id: 'icu-2', date: '2026-11-06', title: 'x', kind: '跑', done: false }], wellness: [] };
+    const r = run(ex, { events: null, activities: [] });
+    expect(r.ops.deleteWorkouts).toEqual([]);
+  });
+  it('略過清單進報告', () => {
+    const r = run({ workouts: [], wellness: [] }, { activities: [act(5, '誤觸', 'Run', 27, 100)] });
+    expect(r.report.skipped[0]).toContain('27 秒');
+  });
+});
+
+describe('runSync（假資料庫與假網路）', () => {
+  const mkEnv = () => { const calls = []; return { calls, env: { ICU_API_KEY: 'SECRETKEY', ICU_ATHLETE_ID: 'i1', DB: {
+    prepare: (sql) => ({ bind: (...a) => ({ sql, a, all: async () => ({ results: [] }), run: async () => (calls.push({ sql, a }), {}) }), all: async () => ({ results: [] }), run: async () => (calls.push({ sql, a: [] }), {}) }),
+    batch: async (st) => { calls.push({ batch: st.length }); } } } } };
+  it('GET 且帶 User-Agent；401 時資料不變、紀錄寫「金鑰失效」、金鑰不外洩', async () => {
+    const { runSync } = await import('../src/sync.js');
+    const seen = []; globalThis.fetch = async (u, o) => (seen.push(o), new Response('no', { status: 401 }));
+    const { env, calls } = mkEnv();
+    const r = await runSync(env, 'cron');
+    expect(r.ok).toBe(false);
+    expect(seen.every((o) => o.method === 'GET' && /Mozilla/.test(o.headers['User-Agent']))).toBe(true);
+    expect(calls.some((c) => 'batch' in c)).toBe(false);
+    const lg = calls.find((c) => /INSERT INTO sync_log/.test(c.sql || ''));
+    expect(lg.a).toContain('同步失敗：金鑰失效');
+    expect(JSON.stringify(calls)).not.toContain('SECRETKEY');
+  });
+});
+
 describe('展示版快照', () => {
   it('不含禁止欄位', () => {
     const s = buildSnapshot({ today: '2026-11-06', ranges: {}, wellness: { rhr: 60, hrv: 30, sleepH: 7 },
