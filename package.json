@@ -13,7 +13,8 @@
     "build:demo": "python3 scripts/build_demo.py",
     "db:local": "wrangler d1 migrations apply adventure --local",
     "deploy": "wrangler deploy",
-    "deploy:demo": "wrangler deploy -c wrangler.demo.toml"
+    "deploy:demo": "wrangler deploy -c wrangler.demo.toml",
+    "update": "git stash && git pull origin main && (git stash pop || true) && npm i && npm run build:demo && npm run deploy && npm run deploy:demo"
   },
   "keywords": [],
   "author": "",
