@@ -32,3 +32,6 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 
 ## 同步測試（本機）
 `node scripts/mock_intervals.mjs` 啟動模擬 intervals.icu（:8799，金鑰 GOODKEY），`.dev.vars` 加 `ICU_API_KEY=GOODKEY`、`ICU_BASE_URL=http://127.0.0.1:8799`，用 `wrangler dev --test-scheduled` 後 `curl "localhost:8787/__scheduled?cron=0+23+*+*+*"` 觸發。同步必須帶一般 User-Agent（否則 403，見設計文件第八節）。
+
+## 疑難排解：/api/me 回 403
+回應的 `reason` 代表原因：`config`（Worker 變數沒設）、`no_jwt`（Access 沒保護此網址）、`bad_jwt:...`（憑證驗證失敗，後面帶步驟與簽發者）、`not_listed`（email 不在名單）。`ACCESS_TEAM_DOMAIN` 要填 **Access 簽發者網域**（例如 `xxx.cloudflareaccess.com`），不是 Worker 名稱；`ACCESS_AUD` 要填該 Access 應用程式的 AUD tag。更新並部署：`npm run update`。
