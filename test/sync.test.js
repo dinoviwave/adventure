@@ -74,6 +74,15 @@ describe('配對與標記完成', () => {
   });
 });
 
+describe('舊編號的計畫外文件', () => {
+  it('同日同名的舊編號文件被取代，不重複', () => {
+    const ex = { workouts: [{ id: 'icu-act-mtb-1', date: '2026-11-05', title: '八德區 登山車', kind: '騎', unplanned: true, done: true }], wellness: [] };
+    const r = run(ex, { events: [], activities: [{ id: 'i77', start_date_local: '2026-11-05T08:00:00', name: '八德區 登山車', type: 'Ride', moving_time: 3600, distance: 20000 }] });
+    expect(r.ops.deleteWorkouts).toContain('icu-act-mtb-1');
+    expect(r.ops.upsertWorkouts.some((o) => o.id === 'icu-act-i77')).toBe(true);
+  });
+});
+
 describe('runSync（假資料庫與假網路）', () => {
   const mkEnv = () => { const calls = []; return { calls, env: { ICU_API_KEY: 'SECRETKEY', ICU_ATHLETE_ID: 'i1', DB: {
     prepare: (sql) => ({ bind: (...a) => ({ sql, a, all: async () => ({ results: [] }), run: async () => (calls.push({ sql, a }), {}) }), all: async () => ({ results: [] }), run: async () => (calls.push({ sql, a: [] }), {}) }),

@@ -93,6 +93,11 @@ export function planSync({ existing, icu, range, nowIso, wellnessFrom }) {
       const note = [x.km ? `${x.km}km` : null, `${x.min} 分`, hr ? `均心率 ${hr}` : null, load != null ? `負荷 ${load}` : null].filter(Boolean).join('・');
       const src = { date: x.date, title: x.a.name || '', kind: x.kind, mins: x.min, note };
       report.unmatched.push(`${x.date} ${src.title}`);
+      // 舊版（人工同步）用自訂編號建立的同日同名計畫外文件：改用真實編號後，移除舊的避免重複
+      for (const w of existing.workouts) {
+        if (w.unplanned && w.id.startsWith('icu-act-') && w.id !== id && w.date === x.date && w.title === src.title && !acts.some((y) => `icu-act-${y.a.id}` === w.id)
+            && !ops.deleteWorkouts.includes(w.id)) { ops.deleteWorkouts.push(w.id); c.removed++; }
+      }
       const cur = byId.get(id);
       if (!cur) { ops.upsertWorkouts.push({ id, doc: { ...src, done: true, doneAt: startIso(x.a), key: false, source: 'intervals.icu', unplanned: true, createdAt: nowIso } }); c.added++; }
       else {
