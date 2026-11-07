@@ -16,40 +16,38 @@ COLORWAYS = {'青綠': (6,7,8), '紫': (24,29,30), '萊姆': (10,11,12)}
 def voxels(stripe):
     V = {}
     put = lambda x,y,z,m: V.__setitem__((x,y,z),m)
-    for x in range(16):
-        for y in range(16):
-            if y >= 12: put(x,y,-1, M['waterHi'] if (x*3+y*5)%7==0 else M['water'])   # 前方泳池，低一格
-            else: put(x,y,0, M['coping'] if y==11 else M['deck'])
-    zc = lambda x: 3 + (9-x) if x < 9 else 3               # 椅背向頭端斜升
-    for x in range(4,16):
+    for x in range(13):
+        for y in range(14):
+            if y >= 11: put(x,y,-1, M['waterHi'] if (x*3+y*5)%7==0 else M['water'])   # 前方泳池，低一格
+            else: put(x,y,0, M['coping'] if y==10 else M['deck'])
+    zc = lambda x: 3 + (8-x) if x < 8 else 3               # 椅背向頭端斜升
+    for x in range(4,12):
         for y in range(5,9):
             put(x,y,zc(x), stripe if (x//2)%2==0 else M['white'])
-        if x < 9:
+        if x < 8:
             for y in (5,8):
                 for z in range(3, zc(x)): put(x,y,z,M['frame'])
-    for (x,y) in [(5,5),(5,8),(14,5),(14,8)]:
+    for (x,y) in [(5,5),(5,8),(10,5),(10,8)]:
         for z in (1,2): put(x,y,z,M['frame'])
-    for x in range(5,15): put(x,5,2,M['frame']); put(x,8,2,M['frame'])
-    for x in (6,7,8):                                        # 軀幹（襯衫）
+    for x in range(5,11): put(x,5,2,M['frame']); put(x,8,2,M['frame'])
+    # Q 版身體：短軀幹、短褲、短腿、小鞋
+    for x in (6,7):
         for y in (6,7): put(x,y,zc(x)+1,M['shirt']); put(x,y,zc(x)+2,M['shirt'])
-    for x in (9,10):                                         # 短褲
-        for y in (6,7): put(x,y,4,M['shorts']); put(x,y,5,M['shorts'])
-    for x in range(11,14):                                   # 腿
-        for y in (6,7): put(x,y,4,M['skin'])
-    for x in (14,15):                                        # 鞋（鞋頭朝 +x，右面為紫色鞋底）
-        for y in (6,7): put(x,y,4,M['shoe'])
-    for x in (7,8,9):                                        # 手臂放兩側
+    for y in (6,7): put(8,y,4,M['shorts']); put(8,y,5,M['shorts'])
+    for y in (6,7): put(9,y,4,M['skin'])
+    for y in (6,7): put(10,y,4,M['shoe'])
+    for x in (7,8):                                         # 手臂
         put(x,5,zc(x)+1,M['skin']); put(x,8,zc(x)+1,M['skin'])
-    put(9,5,4,M['watch']); put(9,8,4,M['watch'])
-    for z in range(1,17): put(7,2,z,M['pole'])               # 傘桿在椅後
-    cx,cy,zt = 7,2,17
-    for x in range(0,16):
-        for y in range(-4,9):
+    put(8,5,4,M['watch']); put(8,8,4,M['watch'])
+    for z in range(1,13): put(6,2,z,M['pole'])              # 傘桿在椅後
+    cx,cy,zt = 6,2,13
+    for x in range(0,13):
+        for y in range(-4,8):
             d = math.hypot(x-cx,y-cy)
-            if d <= 5.6:
+            if d <= 4.6:
                 sec = int(((math.atan2(y-cy,x-cx)+math.pi)/(2*math.pi))*10)%2
                 put(x,y,zt, stripe if sec==0 else M['white'])
-    put(7,2,zt+1,M['grey'])
+    put(6,2,zt+1,M['grey'])
     return V
 
 def inside(poly, px, py):
@@ -78,7 +76,7 @@ def build(stripe):
     # 頭：idle（正面）第 0–13 列；底部置中於椅背頂端
     f=A['idle']['f'][0]; rows=[(y,x,w,c) for y,x,w,c in f if y<=13]
     x0=min(x for _,x,_,_ in rows); x1=max(x+w for _,x,w,_ in rows)
-    hx=(5.5-6.5)*TW/2+OX; hy=(5.5+6.5)*TH/2-(3+(9-5)+1)*ZH+OY
+    hx=(5.2-6.5)*TW/2+OX; hy=(5.2+6.5)*TH/2-(3+(8-5)+1)*ZH+OY
     ox=int(round(hx-(x0+x1)/2)); oy=int(round(hy-14))+3
     for y,x,w,c in rows:
         for i in range(w):
