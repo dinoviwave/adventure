@@ -85,7 +85,7 @@ export default {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
     const who = await authenticate(request, env);
-    if (!who) return err(403, 'forbidden', '沒有權限');
+    if (!who.role) return json({ error: 'forbidden', message: '沒有權限', reason: who.reason }, 403);
     return handleApi(request, env, url, who);
   },
   async scheduled(event, env, ctx) {
