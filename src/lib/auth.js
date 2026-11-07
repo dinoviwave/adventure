@@ -8,7 +8,7 @@ export const teamHost = (t) => String(t || '').trim().replace(/^https?:\/\//i, '
 
 async function getKeys(team) {
   if (jwksCache.keys && Date.now() - jwksCache.at < 3600e3) return jwksCache.keys;
-  const r = await fetch(`https://${teamHost(team)}/cdn-cgi/access/certs`);
+  const r = await fetch(`https://${teamHost(team)}/cdn-cgi/access/certs`, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; adventure-worker)', Accept: 'application/json' } });
   if (!r.ok) throw new Error('jwks ' + r.status);
   jwksCache = { at: Date.now(), keys: (await r.json()).keys };
   return jwksCache.keys;
