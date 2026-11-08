@@ -1,4 +1,4 @@
-import { planSync, taipeiToday } from './lib/sync-core.js';
+import { planSync, todayIn, validTz } from './lib/sync-core.js';
 import { TABLES, rowToDoc, docToRow, newId } from './lib/tables.js';
 
 const UA = 'Mozilla/5.0 (compatible; viwave-sync)'; // 設計文件實測：預設 User-Agent 會被回 403
@@ -23,7 +23,7 @@ function upsertStmt(env, t, id, doc) {
 }
 
 export async function runSync(env, trigger = 'cron') {
-  const now = new Date(), nowIso = now.toISOString(), today = taipeiToday(now);
+  const now = new Date(), nowIso = now.toISOString(), today = todayIn(validTz(env.APP_TZ) || 'Asia/Taipei', now); // 伺服器端同步範圍的「今天」用 APP_TZ
   // 讀取範圍（設計文件第四節）：階段起始日 → 最後一場賽事後一週；活動與體能到今天
   const start = env.SYNC_START || '2026-11-02', endPlan = env.SYNC_END || '2026-12-27';
   const range = { from: start, to: endPlan };

@@ -86,7 +86,13 @@
     } catch (e) { /* 狀態列失敗不影響頁面 */ }
   }
   var syncing = false, btn = null, lastOk = null;
-  function hhmm(iso) { try { var d = new Date(iso); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) } catch (e) { return '' } }
+  // 時間依裝置時區顯示（Intl 會用裝置的 IANA 時區，例如 Asia/Taipei、America/Los_Angeles）
+  function hhmm(iso) {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).format(new Date(iso));
+    } catch (e) { return '' }
+  }
   function setBtn(label) {
     try {
       if (!btn) {

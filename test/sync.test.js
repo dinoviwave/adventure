@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { planSync } from '../src/lib/sync-core.js';
+import { todayIn, validTz } from '../src/lib/sync-core.js';
 import { buildSnapshot } from '../src/lib/snapshot.js';
 
 const range = { from: '2026-11-01', to: '2026-12-31' };
@@ -111,4 +112,14 @@ describe('展示版快照', () => {
     expect(s.body).toEqual({ rhr: 'out', hrv: 'out' });
     expect(s.extras[0]).toEqual({ title: 'U', km: 2.4, min: 8 });
   });
+});
+
+describe('時區', () => {
+  const t = new Date('2026-11-07T20:00:00Z');
+  it('同一個時間點，不同時區的「今天」不同', () => {
+    expect(todayIn('Asia/Taipei', t)).toBe('2026-11-08');
+    expect(todayIn('America/Los_Angeles', t)).toBe('2026-11-07');
+    expect(todayIn('Asia/Tokyo', t)).toBe('2026-11-08');
+  });
+  it('無效時區回傳 null', () => { expect(validTz('Not/AZone')).toBeNull(); expect(validTz('')).toBeNull(); expect(validTz('Asia/Taipei')).toBe('Asia/Taipei'); });
 });

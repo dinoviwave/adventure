@@ -18,7 +18,7 @@ t = t.replace('<main class="card" id="card"', '<script src="/rest-art.js"></scri
 # 沒有課表（休息）時改顯示休息圖
 t = t.replace("function scene(){", "function scene(){\n  if(!w&&window.REST_ART){var v=REST_ART.pick(),ox=Math.round((220-v.w)/2),oy=Math.round((130-v.h)/2),q='<svg viewBox=\"0 0 220 130\" role=\"img\" aria-label=\"角色正在休息\" shape-rendering=\"crispEdges\"><rect class=\"m-sky\" x=\"0\" y=\"0\" width=\"220\" height=\"130\"/>';v.f[0].forEach(function(r){q+='<rect x=\"'+(r[1]+ox)+'\" y=\"'+(r[0]+oy)+'\" width=\"'+r[2]+'\" height=\"1\" fill=\"#'+REST_ART.p[r[3]]+'\"/>'});return q+'</svg>'}", 1)
 assert 'var SNAP=__SNAP__;' in t and t.rstrip().endswith('</script>')
-t = t.replace('var SNAP=__SNAP__;', "fetch('/api/snapshot',{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(SNAP){", 1)
+t = t.replace('var SNAP=__SNAP__;', "fetch('/api/snapshot?tz='+encodeURIComponent((function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){return ''}})()),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(SNAP){", 1)
 k = t.rindex('})();')
 t = t[:k] + "}).catch(function(){document.getElementById('card').innerHTML='<div class=\"sec\">資料暫時讀不到，請稍後再試。</div>'});\n})();" + t[k + 5:]
 t = '<!doctype html>\n<html lang="zh-Hant"><head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + t

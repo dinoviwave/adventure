@@ -125,4 +125,9 @@ export function planSync({ existing, icu, range, nowIso, wellnessFrom }) {
 
 export const ymd = (d) => d.toISOString().slice(0, 10);
 export const addDays = (s, n) => ymd(new Date(Date.parse(s + 'T00:00:00Z') + n * 86400000));
-export const taipeiToday = (now = new Date()) => ymd(new Date(now.getTime() + 8 * 3600e3));
+// 依 IANA 時區算「今天」（YYYY-MM-DD）。無效時區回傳 null。
+export const todayIn = (tz, now = new Date()) => {
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now) } catch { return null }
+};
+export const validTz = (tz) => (tz && todayIn(String(tz)) ? String(tz) : null);
+export const taipeiToday = (now = new Date()) => todayIn('Asia/Taipei', now);
