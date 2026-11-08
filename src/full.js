@@ -1,6 +1,6 @@
 import { TABLES, WRITABLE, CONFIG_KEYS, rowToDoc, docToRow, newId } from './lib/tables.js';
 import { authenticate } from './lib/auth.js';
-import { runSync } from './sync.js';
+import { runSync, syncNow } from './sync.js';
 
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const err = (status, code, msg) => json({ error: code, message: msg }, status);
@@ -33,6 +33,12 @@ async function handleApi(request, env, url, who) {
   const m = request.method;
 
   if (t === 'me') return json({ email: who.email, canWrite: who.role === 'editor' });
+  if (t === 'sync-now') {
+    if (m !== 'POST') return err(405, 'method', '不支援的方法');
+    if (who.role !== 'editor') return err(403, 'read_only', '目前只能檢視');
+    let body = {}; try { body = await request.json() } catch { /* 沒有內容也可 */ }
+    return json(await syncNow(env, !!(body && body.force)));
+  }
   if (t === 'sync-status') {
     const last = await env.DB.prepare('SELECT * FROM sync_log ORDER BY t DESC LIMIT 1').first();
     const lastOk = await env.DB.prepare("SELECT t FROM sync_log WHERE error IS NULL ORDER BY t DESC LIMIT 1").first();

@@ -38,3 +38,9 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 
 ## 休息圖
 今天沒有課表時，展示版與今日圖卡改顯示休息圖（等角 Q 版，三種配色隨機）。像素資料在 `source/rest_iso/iso_rest.json`，重新產生用 `python3 source/rest_iso/build_iso.py`，再跑 `npm run build:demo` 更新 `rest-art.js`。
+
+## 資料更新時機
+- 排程：台北 06:00–22:30 每 30 分鐘，另加 23:00（`wrangler.toml` 的 `crons`，UTC）。
+- 打開頁面或切回 App：可編輯者自動在背景同步，10 分鐘內剛同步過就略過（`SYNC_COOLDOWN_MIN` 可調）。
+- 右下角「↻ 更新於 HH:MM」：立即同步，最少間隔 60 秒；只讀者按下為重新載入資料。
+- 檢查腳本：`scripts/sync_open_check.cjs`、`scripts/sync_btn_check.cjs`（需本機 :8787 與模擬 intervals.icu）。

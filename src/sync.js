@@ -60,9 +60,26 @@ export async function runSync(env, trigger = 'cron') {
     for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50)); // 一批最多 50 筆
     const err = failed.length ? '部分讀取失敗：' + failed.join('；') : report.warnings.length ? '警告：' + report.warnings.join('；') : null;
     await log(counts, err, { skipped: report.skipped, unmatched: report.unmatched, warnings: report.warnings, failed });
-    return { ok: !failed.length, counts };
+    return { ok: !failed.length, counts, error: err };
   } catch (e) {
-    await log(null, e.auth ? '同步失敗：金鑰失效' : '同步失敗：' + scrub(e.message));
-    return { ok: false };
+    const msg = e.auth ? '同步失敗：金鑰失效' : '同步失敗：' + scrub(e.message);
+    await log(null, msg);
+    return { ok: false, error: msg };
+  }
+}
+
+// 打開頁面時觸發：冷卻時間內不重複同步（含排程剛跑過），並用鎖避免同時兩次。
+export async function syncNow(env, force = false) {
+  const cool = force ? 60000 : (Number(env.SYNC_COOLDOWN_MIN) || 10) * 60000; // 手動按鈕：最少間隔 60 秒
+  const last = await env.DB.prepare('SELECT t FROM sync_log ORDER BY t DESC LIMIT 1').first();
+  if (last && Date.now() - Date.parse(last.t) < cool) return { status: 'cooldown', lastAt: last.t };
+  const lock = await env.DB.prepare("SELECT value FROM config WHERE key='sync_lock'").first();
+  if (lock && Date.now() - Number(lock.value) < 90000) return { status: 'busy' };
+  await env.DB.prepare("INSERT INTO config (key,value) VALUES ('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(String(Date.now())).run();
+  try {
+    const r = await runSync(env, 'open');
+    return { status: r.ok ? 'done' : 'failed', counts: r.counts, error: r.error || null };
+  } finally {
+    await env.DB.prepare("DELETE FROM config WHERE key='sync_lock'").run();
   }
 }

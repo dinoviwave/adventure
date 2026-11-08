@@ -15,7 +15,7 @@ database_id = "REPLACE_WITH_D1_ID"
 migrations_dir = "migrations"
 
 [triggers]
-crons = ["0 23 * * *", "0 14 * * *"]   # 台北 07:00 與 22:00（UTC 23:00、14:00）
+crons = ["0,30 22,23,0-14 * * *", "0 15 * * *"]   # 台北 06:00–22:30 每 30 分鐘，加 23:00（UTC 22–14 點的 0、30 分；UTC 15:00 整點）
 
 [vars]
 ICU_ATHLETE_ID = "i572505"
