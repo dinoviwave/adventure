@@ -95,6 +95,6 @@ export default {
     return handleApi(request, env, url, who);
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runSync(env, 'cron'));
+    ctx.waitUntil(runSync(env, 'cron').catch((e) => console.error('排程同步未預期錯誤：', String(e && e.message).slice(0, 200))));
   },
 };

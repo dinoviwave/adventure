@@ -29,9 +29,18 @@ export async function runSync(env, trigger = 'cron') {
   const range = { from: start, to: endPlan };
   const logId = newId();
   const log = async (counts, error, detail) => {
-    await env.DB.prepare('INSERT INTO sync_log (id,t,"trigger",range_from,range_to,added,updated,removed,skipped,error,detail) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
-      .bind(logId, nowIso, trigger, range.from, range.to, counts?.added ?? 0, counts?.updated ?? 0, counts?.removed ?? 0, counts?.skipped ?? 0, error ?? null, detail ? JSON.stringify(detail) : null).run();
-    await env.DB.prepare("UPDATE sync_requests SET status='done' WHERE status='pending'").run();
+    const args = [logId, nowIso, trigger, range.from, range.to, counts?.added ?? 0, counts?.updated ?? 0, counts?.removed ?? 0, counts?.skipped ?? 0, error ?? null];
+    try {
+      await env.DB.prepare('INSERT INTO sync_log (id,t,"trigger",range_from,range_to,added,updated,removed,skipped,error,detail) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+        .bind(...args, detail ? JSON.stringify(detail) : null).run();
+    } catch (e1) {
+      // 資料庫尚未升級（沒有 detail 欄位）等情況：退回不含 detail 的紀錄，避免同步因紀錄失敗而中斷
+      console.error('sync_log 寫入失敗，改用簡版：', String(e1 && e1.message).slice(0, 200));
+      try {
+        await env.DB.prepare('INSERT INTO sync_log (id,t,"trigger",range_from,range_to,added,updated,removed,skipped,error) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(...args).run();
+      } catch (e2) { console.error('sync_log 簡版也寫入失敗：', String(e2 && e2.message).slice(0, 200)); }
+    }
+    try { await env.DB.prepare("UPDATE sync_requests SET status='done' WHERE status='pending'").run(); } catch (e) { console.error('sync_requests 更新失敗：', String(e && e.message).slice(0, 200)); }
   };
   const scrub = (m) => String(m || '').split(env.ICU_API_KEY || '\u0000').join('***').slice(0, 300);
   try {

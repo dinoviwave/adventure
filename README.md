@@ -44,3 +44,6 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 - 打開頁面或切回 App：可編輯者自動在背景同步，10 分鐘內剛同步過就略過（`SYNC_COOLDOWN_MIN` 可調）。
 - 右下角「↻ 更新於 HH:MM」：立即同步，最少間隔 60 秒；只讀者按下為重新載入資料。
 - 檢查腳本：`scripts/sync_open_check.cjs`、`scripts/sync_btn_check.cjs`（需本機 :8787 與模擬 intervals.icu）。
+
+## 資料庫升級（有新的 migrations 時）
+拉到新版程式後，若 `migrations/` 有新檔案，先升級遠端資料庫再部署：`npm run db:remote`（會列出待套用的檔案並要求確認），再 `npm run update`。2026-11-12 的 `0002_sync_log_detail.sql` 為 `sync_log` 加 `detail` 欄位；沒套用時，排程同步的紀錄寫入會失敗（Cloudflare 指標顯示「未發現的例外」）。

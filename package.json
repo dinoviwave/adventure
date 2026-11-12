@@ -14,7 +14,8 @@
     "db:local": "wrangler d1 migrations apply adventure --local",
     "deploy": "wrangler deploy",
     "deploy:demo": "wrangler deploy -c wrangler.demo.toml",
-    "update": "git stash && git pull origin main && (git stash pop || true) && npm i && npm run build:demo && npm run deploy && npm run deploy:demo"
+    "update": "git stash && git pull origin main && (git stash pop || true) && npm i && npm run build:demo && npm run deploy && npm run deploy:demo",
+    "db:remote": "wrangler d1 migrations apply adventure --remote"
   },
   "keywords": [],
   "author": "",

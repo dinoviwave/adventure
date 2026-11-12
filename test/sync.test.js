@@ -102,6 +102,20 @@ describe('runSync（假資料庫與假網路）', () => {
   });
 });
 
+describe('同步紀錄寫入失敗時不崩潰', () => {
+  it('舊資料庫缺 detail 欄位：改寫簡版紀錄，runSync 不丟例外', async () => {
+    const { runSync } = await import('../src/sync.js');
+    globalThis.fetch = async () => new Response('[]', { status: 200 });
+    const sqls = [];
+    const env = { ICU_API_KEY: 'K', ICU_ATHLETE_ID: 'i1', DB: {
+      prepare: (sql) => ({ bind: (...a) => ({ all: async () => ({ results: [] }), run: async () => { sqls.push(sql); if (/detail/.test(sql)) throw new Error('table sync_log has no column named detail'); return {}; } }),
+        all: async () => ({ results: [] }), run: async () => ({}) }),
+      batch: async () => {} } };
+    await expect(runSync(env, 'cron')).resolves.toBeTruthy();
+    expect(sqls.some((q2) => /INSERT INTO sync_log/.test(q2) && !/detail/.test(q2))).toBe(true);
+  });
+});
+
 describe('展示版快照', () => {
   it('不含禁止欄位', () => {
     const s = buildSnapshot({ today: '2026-11-06', ranges: {}, wellness: { rhr: 60, hrv: 30, sleepH: 7 },
