@@ -730,25 +730,28 @@ function cfit(ctx,text,maxW,size,font){
   while(ctx.measureText(text).width>maxW&&z>10){z--;ctx.font=z+'px '+font}
   return text;
 }
-/* 終點拱門（斜向立體，pixel 方塊）：回傳 {r:[[x,y,w,h,色]...], t:{x,y,w}}；t 是拱門橫樑上放文字的位置 */
-function archParts(x0,base,aw,ah){
-  var O='#13203d',W='#ffffff',PF='#dfe9f7',PS='#8fa3c4',PT='#f4f8ff',SH='#7ea05a',d=4,pw=7,lh=14,top=base-ah,R=[];
-  function box(x,y,bw,bh){
-    var k;
-    for(k=0;k<d;k++) R.push([x+k+1,y-k-1,bw,1,PT]);           // 頂面
-    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,bh,PS]);          // 側面（深一階）
-    R.push([x,y,bw,bh,PF]);                                    // 正面
-    R.push([x,y,bw,1,O],[x,y+bh-1,bw,1,O],[x,y,1,bh,O],[x+bw-1,y,1,bh,O]); // 正面外框
-    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,1,O]);            // 側面上緣
+/* 終點拱門（橫跨跑道）：近側柱在跑道前方、遠側柱在跑道後方，橫樑斜著連接兩柱頂，中間吊一塊名牌。
+   回傳 {r:[[x,y,w,h,色]...], t:{x,y,w}}；t 是名牌上放文字的位置。baseN／baseF＝近側／遠側柱腳的 y，ah＝柱高，dx＝遠側柱往右的位移，bw＝名牌寬 */
+function archParts(x0,baseN,baseF,ah,dx,bw){
+  var O='#13203d',W='#ffffff',PF='#dfe9f7',PS='#8fa3c4',PT='#f4f8ff',SH='#7ea05a',pw=6,bh=11,R=[];
+  function leg(x,base){
+    var y=base-ah;
+    R.push([x+1,base,pw+2,2,SH]);                                          // 地面影子
+    R.push([x,y-2,pw+2,2,PT]);                                             // 頂蓋
+    R.push([x,y,pw,ah,PF],[x+pw,y,2,ah,PS]);                               // 正面、側面（深一階）
+    R.push([x,y,1,ah,O],[x+pw+1,y,1,ah,O],[x,base-1,pw+2,1,O],[x,y-2,pw+2,1,O]); // 外框
   }
-  R.push([x0+2,base,aw+d,2,SH]);                              // 地面影子
-  box(x0,top+lh-2,pw,ah-lh+2);                                // 左柱
-  box(x0+aw-pw,top+lh-2,pw,ah-lh+2);                          // 右柱
-  box(x0,top,aw,lh);                                          // 橫樑
-  var i,n=Math.floor((aw-2)/3);
-  for(i=0;i<n;i++){ R.push([x0+1+i*3,top+1,3,3,i%2?W:O]); R.push([x0+1+i*3,top+lh-4,3,3,i%2?O:W]); } // 上下格紋
-  R.push([x0+1,top+4,aw-2,lh-8,W]);                           // 中間白底（放文字）
-  return {r:R,t:{x:x0+aw/2,y:top+lh-5,w:aw-6}};
+  leg(x0+dx,baseF);                                                        // 遠側柱（先畫）
+  var yf=baseF-ah-2, yn=baseN-ah-2, y, t;                                  // 橫樑：由遠柱頂斜到近柱頂，黑白相間
+  for(y=yf;y<=yn;y++){
+    t=(y-yf)/Math.max(1,yn-yf); var xl=x0+dx-Math.round(dx*t);
+    R.push([xl,y,pw+2,1,(Math.floor((y-yf)/3)%2)?O:W],[xl,y,1,1,O],[xl+pw+1,y,1,1,O]);
+  }
+  leg(x0,baseN);                                                           // 近側柱（後畫，擋在橫樑前）
+  var mx=x0+Math.round(dx/2)+4, my=Math.round((yf+yn)/2)+3;                // 名牌
+  R.push([mx-bw/2+3,my-3,1,3,O],[mx+bw/2-4,my-3,1,3,O]);                   // 吊繩
+  R.push([mx-bw/2,my,bw,bh,O],[mx-bw/2+1,my+1,bw-2,bh-2,W]);
+  return {r:R,t:{x:mx,y:my+bh-3,w:bw-4}};
 }
 function archLabel(s,maxChars){s=String(s||'');return s.length>maxChars?s.slice(0,maxChars-1)+'…':s}
 /* 課表原名 → 短標籤（前端顯示用；資料本身不改）。
@@ -791,7 +794,7 @@ function drawCard(D){
   var fi=D.act==='run'?1:0; if(fi>=A.f.length) fi=0;
   A.f[fi].forEach(function(r){R(sx+r[1]*K,sy+r[0]*K,r[2]*K,K,'#'+ACT.p[r[3]])});
   if(NX){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（私人頁面，用課表原名）
-    var AP=archParts(136,76,36,42), lb=archLabel(wlabel(NX.title,NX.kind),6), fs=Math.max(3,Math.min(6,Math.floor(AP.t.w/lb.length)));
+    var AP=archParts(138,92,75,62,16,26), lb=archLabel(wlabel(NX.title,NX.kind),5), fs=Math.max(3,Math.min(6,Math.floor(AP.t.w/lb.length)));
     AP.r.forEach(function(q){R(q[0],q[1],q[2],q[3],q[4])});
     ctx.fillStyle='#13203d'; ctx.textAlign='center'; ctx.font=fs+'px '+BODY; ctx.fillText(lb,AP.t.x,AP.t.y); ctx.textAlign='left';
   }
