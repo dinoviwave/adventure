@@ -40,6 +40,12 @@ h1,h2,p{margin:0}
 .chip i{flex:none;width:18px;height:18px;border:2px solid var(--line);display:block}
 .chip.ok i{background:#4cc23f}.chip.out i{background:#ee3b3b}.chip.near i{background:#f2c230}.chip.missing i{background:#fff}
 .legend{margin-top:8px;color:var(--muted);font-size:12px}
+.finl{border-top:3px solid var(--line);background:var(--panel)}
+.finl i{display:block;height:12px;background-image:conic-gradient(#13203d 25%,#fff 0 50%,#13203d 0 75%,#fff 0);background-size:12px 12px;border-bottom:3px solid var(--line)}
+.finl .fb{padding:10px 16px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.finl .fk{font-family:var(--font-display);font-size:9px;color:var(--muted);letter-spacing:.08em}
+.finl .fn{font-size:16px}
+.finl .fm{color:var(--muted);font-size:13px;width:100%}
 .ft{padding:10px 16px;border-top:3px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 @keyframes sweat{0%{transform:translateY(0);opacity:1}75%{transform:translateY(8px);opacity:1}100%{transform:translateY(12px);opacity:0}}
 .sdrop{animation:sweat .9s steps(5,end) infinite}
@@ -92,6 +98,7 @@ function sprite(x,y,left,act,lvl){
   return out+'</g></g>';
 }
 var WD=['日','一','二','三','四','五','六'];
+var KN={'跑':'跑步','騎':'騎車','游':'游泳','肌力':'肌力訓練'}; function kn(k){return KN[k]||k||'其他'}
 function p(s){var a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2],12)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var d=p(SNAP.date), days=Math.round((p(SNAP.race.date)-d)/86400000);
@@ -112,14 +119,15 @@ function scene(){
 }
 var h='<div class="hd"><h1>TODAY\'S QUEST</h1><div class="dt">'+(d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）</div></div>';
 h+='<div class="scene">'+scene()+'</div>';
+if(SNAP.next){var nd=p(SNAP.next.date);h+='<div class="finl" aria-label="下一個課表"><i aria-hidden="true"></i><div class="fb"><span class="fk">NEXT</span><span class="kd">'+esc(SNAP.next.kind)+'</span><span class="fn">'+esc(kn(SNAP.next.kind))+'</span><span class="fm">'+(nd.getMonth()+1)+'/'+nd.getDate()+'（'+WD[nd.getDay()]+'）'+(SNAP.next.mins?'・'+SNAP.next.mins+' 分':'')+'</span></div></div>'}
 h+='<section class="sec"><h2>今天的課表</h2>';
 if(w){
-  h+='<div class="wk"><span class="kd">'+esc(w.kind)+'</span><span class="wt">'+esc(w.title)+'</span></div>';
+  h+='<div class="wk"><span class="kd">'+esc(w.kind)+'</span><span class="wt">'+esc(kn(w.kind))+'</span></div>';
   h+='<div class="meta">計畫 '+w.mins+' 分</div>';
   if(w.done){h+='<span class="st done">完成</span>'+(w.actual?'<div class="meta">實際 '+(w.actual.km?w.actual.km+' 公里・':'')+w.actual.min+' 分</div>':'')}
   else h+='<span class="st todo">還沒完成</span>';
 }else h+='<div class="wt">今天休息</div>';
-if(SNAP.extras&&SNAP.extras.length){h+='<div class="meta">另外完成：'+SNAP.extras.map(function(x){return esc(x.title)+(x.km?'（'+x.km+' 公里・'+x.min+' 分）':'')}).join('、')+'</div>'}
+if(SNAP.extras&&SNAP.extras.length){h+='<div class="meta">另外完成：'+SNAP.extras.map(function(x){return esc(kn(x.kind))+(x.km?'（'+x.km+' 公里・'+x.min+' 分）':'')}).join('、')+'</div>'}
 h+='</section>';
 h+='<section class="sec"><h2>備賽進度</h2><div class="big">第 '+SNAP.weekNo+' 週 / '+SNAP.weeks+'</div>';
 h+='<div class="meta">距離 '+esc(SNAP.race.name)+' 還有 '+days+' 天</div>';
@@ -129,8 +137,8 @@ h+='</div></section>';
 h+='<section class="sec"><h2>身體訊號</h2><div class="chips">';
 [['rhr','靜息心率'],['hrv','HRV']].forEach(function(x){var s=SNAP.body[x[0]];h+='<div class="chip '+s+'"><i></i><span>'+x[1]+'<br>'+LBL[s]+'</span></div>'});
 h+='</div><div class="legend">綠＝在自己設的範圍內　紅＝超出　白＝還沒資料。紅色時角色會流汗。</div></section>';
-h+='<div class="ft"><span>雙半馬冒險路線</span><span>原創像素風</span></div>';
+h+='<div class="ft"><span>雙半馬冒險路線</span><span>© '+new Date().getFullYear()+' dino.tw</span></div>';
 document.getElementById('card').innerHTML=h;
-}).catch(function(){document.getElementById('card').innerHTML='<div class="sec">資料暫時讀不到，請稍後再試。</div>'});
+}).catch(function(e){try{console.error('展示版載入失敗：',e)}catch(_){}document.getElementById('card').innerHTML='<div class="sec">資料暫時讀不到，請稍後再試。</div>'});
 })();
 </script>

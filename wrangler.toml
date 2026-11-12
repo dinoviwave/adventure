@@ -1,7 +1,7 @@
 name = "adventure"
 main = "src/full.js"
 compatibility_date = "2026-01-01"
-workers_dev = true
+workers_dev = false   # 只用自訂網域；舊的 workers.dev 網址已關閉（2026-11-12）
 
 [[routes]]
 pattern = "adventure.dino.tw"

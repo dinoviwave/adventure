@@ -818,7 +818,7 @@ function drawCard(D){
   });
   ctx.fillStyle=MUTED; ctx.font='10px '+BODY; ctx.fillText('綠＝在自己設的範圍內　紅＝超出　白＝還沒資料。紅色時角色會流汗。',16,y2+76);
   ctx.fillStyle=INK; ctx.fillRect(0,y2+82,360,3);
-  ctx.fillStyle=MUTED; ctx.font='11px '+BODY; ctx.fillText('雙半馬冒險路線',16,y2+98); ctx.textAlign='right'; ctx.fillText('原創像素風',344,y2+98); ctx.textAlign='left';
+  ctx.fillStyle=MUTED; ctx.font='11px '+BODY; ctx.fillText('雙半馬冒險路線',16,y2+98); ctx.textAlign='right'; ctx.fillText('© '+new Date().getFullYear()+' dino.tw',344,y2+98); ctx.textAlign='left';
   ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.strokeRect(2,2,356,636);
   return cv;
 }

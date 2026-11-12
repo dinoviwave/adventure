@@ -124,7 +124,20 @@ describe('展示版快照', () => {
     const j = JSON.stringify(s);
     for (const w of ['SECRET', 'avgHr', 'load', '115', 'desc', 'hrv":3', 'rhr":6']) expect(j).not.toContain(w);
     expect(s.body).toEqual({ rhr: 'out', hrv: 'out' });
-    expect(s.extras[0]).toEqual({ title: 'U', km: 2.4, min: 8 });
+    expect(s.extras[0]).toEqual({ kind: undefined, km: 2.4, min: 8 });
+    expect(j).not.toContain('"title"'); expect(j).not.toContain('"U"'); expect(s.workout).not.toHaveProperty('title');
+  });
+});
+
+describe('下一個課表', () => {
+  it('取今天之後最近一筆有排的訓練，只給類型、日期、時長', () => {
+    const base = { today: '2026-11-06', ranges: {}, wellness: undefined };
+    const s = buildSnapshot({ ...base, workouts: [
+      { date: '2026-11-06', title: 'T', kind: '跑', mins: 50 }, { date: '2026-11-09', title: 'SECRET2', kind: '休息' },
+      { date: '2026-11-10', title: 'SECRET3', kind: '騎', mins: 30 }, { date: '2026-11-08', title: 'X', kind: '跑', mins: 20, unplanned: true } ] });
+    expect(s.next).toEqual({ date: '2026-11-10', kind: '騎', mins: 30 });
+    expect(JSON.stringify(s)).not.toContain('SECRET');
+    expect(buildSnapshot({ ...base, workouts: [] }).next).toBeNull();
   });
 });
 

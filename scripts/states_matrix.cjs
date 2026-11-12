@@ -9,8 +9,8 @@ const states = [['missing', '缺資料'], ['ok', '範圍內'], ['near', '接近�
     const ctx = await b.newContext({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 1, colorScheme: 'light' });
     const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
     await p.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    await p.route('**/api/snapshot', (r) => r.fulfill({ json: { date: '2026-11-07', weekNo: 1, weeks: 7, race: { name: '南山人壽半馬', date: '2026-11-22' },
-      workout: title ? { kind, title, mins: 40, done: false, actual: null } : null, extras: [], week: { done: 3, total: 5 }, body: { rhr: st, hrv: st } } }));
+    await p.route(/\/api\/snapshot/, (r) => r.fulfill({ json: { date: '2026-11-07', weekNo: 1, weeks: 7, race: { name: '南山人壽半馬', date: '2026-11-22' },
+      workout: title ? { kind, mins: 40, done: false, actual: null } : null, next: { date: '2026-11-09', kind: '跑', mins: 50 }, extras: [], week: { done: 3, total: 5 }, body: { rhr: st, hrv: st } } }));
     await p.goto('http://127.0.0.1:8801/index.html'); await p.waitForTimeout(700);
     await p.screenshot({ path: `${out}/m_${kind}_${st}.png`, fullPage: true }); await ctx.close();
   }

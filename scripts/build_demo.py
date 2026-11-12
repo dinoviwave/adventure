@@ -20,7 +20,7 @@ t = t.replace("function scene(){", "function scene(){\n  if(!w&&window.REST_ART)
 assert 'var SNAP=__SNAP__;' in t and t.rstrip().endswith('</script>')
 t = t.replace('var SNAP=__SNAP__;', "fetch('/api/snapshot?tz='+encodeURIComponent((function(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){return ''}})()),{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(SNAP){", 1)
 k = t.rindex('})();')
-t = t[:k] + "}).catch(function(){document.getElementById('card').innerHTML='<div class=\"sec\">資料暫時讀不到，請稍後再試。</div>'});\n})();" + t[k + 5:]
+t = t[:k] + "}).catch(function(e){try{console.error('展示版載入失敗：',e)}catch(_){}document.getElementById('card').innerHTML='<div class=\"sec\">資料暫時讀不到，請稍後再試。</div>'});\n})();" + t[k + 5:]
 t = '<!doctype html>\n<html lang="zh-Hant"><head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' + t
 os.makedirs(os.path.join(root, 'public-demo'), exist_ok=True)
 open(os.path.join(root, 'public-demo/index.html'), 'w', encoding='utf-8').write(t)

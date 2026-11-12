@@ -38,6 +38,7 @@
 - 身分與驗證（2026-11-12）：長期方向為專屬身分服務、各服務自己授權（草稿，待決定）；階段 0 已生效：Google 登入方式已建立，`adventure` 只留 Google 並開 Instant authentication，電腦直接跳 Google、iPhone 主畫面網頁直接進頁面（2026-11-12）；兩層登入時間已設（Dino 回報）；待確認太太帳號是否在 Google 測試使用者，並觀察長期不重登。文件索引見 docs/README.md。
 - 同步狀態提示（2026-11-12）：右下角按鈕「↻ 更新於 HH:MM」，最近一次同步失敗時多一行紅字「同步失敗：原因（HH:MM）」，超過 24 小時沒有成功同步時顯示「超過 N 小時未更新」，從未成功同步顯示「尚未成功同步」；/api/sync-status 回傳 failed、staleHours。四種情況並排截圖：docs/shots/sync_status_states.png（scripts/sync_status_states.cjs）。同步失敗的主動通知：Dino 決定**不做**（失敗不嚴重，頁面有呈現即可，2026-11-12）。
 - 自訂網域（2026-11-12）：完整版 adventure.dino.tw、展示版 quest.dino.tw（已部署並驗證，2026-11-12：adventure.dino.tw 未登入時 302 導向 Access 登入；quest.dino.tw 公開，/api/snapshot 回 200，其餘 /api/* 為 404，無禁止欄位；檢查腳本 scripts/check_domains.sh；Dino 確認新網址使用正常）；trilog.run 不用於 adventure；ACCESS_AUD 支援逗號分隔多個。workers.dev 先保留過渡。
+- 展示版調整（2026-11-12）：workers.dev 已關閉（`workers_dev = false`，待部署生效）；展示版課表與計畫外活動只顯示類型名稱（跑步、騎車、游泳、肌力訓練），不再輸出課表原名與活動名稱（含地名）；頁尾改為「© 年份 dino.tw」（展示版與完整版今日圖卡）；展示版新增「下一個課表」終點線區塊（只給類型、日期、時長）。待決定：名稱（原「雙半馬冒險路線」）、終點線區塊的位置與是否也放完整版。
 - 待驗收（2026-11-15 提醒）：Cloudflare 指標「未發現的例外」在 2026-11-12 修正 sync_log 缺 detail 欄位（遠端已補欄位並部署）後是否停止增加；頁面不再誤報紅色「同步失敗」。
 - 階段 4：收尾　未開始
 - 階段 5：切換上線與營運（切換與回退、金鑰輪替、備份還原、安全複查）　未開始；同步失敗通知已用頁面提示完成，不另外通知
