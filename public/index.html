@@ -752,12 +752,12 @@ function archParts(x0,baseN,baseF,ah,dx,bw,tb,style){
     if(style==='gold'){                                                                              // 基座、金球、旗幟
       R.push([x-1,base-4,pw+4,4,S.PS],[x-1,base-4,pw+4,1,O],[x-1,base-1,pw+4,1,O]);
       R.push([x+1,y0-8,4,5,S.PT],[x+3,y0-8,2,5,S.PS],[x+1,y0-8,4,1,O],[x+1,y0-4,4,1,O]);
-      R.push([x+3,y0-17,1,9,O],[x+4,y0-17,6,3,'#e8453c'],[x+4,y0-14,4,1,'#b82e2e']);
+      R.push([x+3,y0-14,1,6,O],[x+4,y0-14,6,3,'#e8453c'],[x+4,y0-11,4,1,'#b82e2e']);
     }
     if(style==='festival'){ R.push([x+2,y0-6,2,4,O],[x+1,y0-8,4,2,'#e8453c']); }                      // 頂端小燈
     if(style==='royal'){                                                                             // 火炬
       R.push([x,y0-6,pw+2,4,'#5b4a2e'],[x,y0-6,pw+2,1,O]);
-      R.push([x+1,y0-13,4,7,'#ff9f1c'],[x+2,y0-16,2,4,'#ffd23f'],[x+2,y0-11,2,3,'#ffd23f']);
+      R.push([x+1,y0-12,4,6,'#ff9f1c'],[x+2,y0-15,2,4,'#ffd23f'],[x+2,y0-10,2,3,'#ffd23f']);
     }
   }
   // 地面終點線：沿兩柱腳之間斜著橫過跑道，格紋（皇家版為紅毯）
@@ -785,6 +785,20 @@ function archParts(x0,baseN,baseF,ah,dx,bw,tb,style){
   R.push([mx-bw/2+3,my-3,1,3,O],[mx+bw/2-4,my-3,1,3,O]);                     // 吊繩
   R.push([mx-bw/2-1,my-1,bw+2,bh+2,O],[mx-bw/2,my,bw,bh,S.plO],[mx-bw/2+1,my+1,bw-2,bh-2,S.pl]);
   return {r:R,t:{x:mx,y:my+bh-3,w:bw-4,c:S.tx}};
+}
+/* 終點拱門的出現規則與風格（前端；依賴 wlabel）。
+   - 比賽當天：拱門隨機用金色（gold）或皇家紅毯（royal），名牌寫賽事名稱
+   - 品質課表（標記為關鍵課表，或名稱含節奏、間歇、閾值、乳酸、CP、配速、tempo、interval、VO2）：彩旗慶典門（festival），名牌寫課表短標籤
+   - 其他（一般課表）：沒有拱門，維持原本畫面
+   force：預覽用，強制指定風格 */
+function isQuality(w){ return !!w && (w.key===true || /節奏|間歇|閾值|乳酸|CP|配速|tempo|interval|VO2/i.test(String(w.title||''))); }
+function raceLabel(name){ return String(name||'').replace(/人壽|馬拉松|\s/g,''); }
+function archPlan(nx,race,today,force){
+  var st=null,label=null;
+  if(race&&race.date===today){ st=Math.random()<0.5?'gold':'royal'; label=raceLabel(race.name); }
+  else if(nx&&isQuality(nx)){ st='festival'; label=wlabel(nx.title,nx.kind); }
+  if(force==='gold'||force==='festival'||force==='royal'){ if(!st) label=nx?wlabel(nx.title,nx.kind):'終點'; st=force; }
+  return st?{style:st,label:label}:null;
 }
 function archLabel(s,maxChars){s=String(s||'');return s.length>maxChars?s.slice(0,maxChars-1)+'…':s}
 /* 課表原名 → 短標籤（前端顯示用；資料本身不改）。
@@ -821,13 +835,13 @@ function drawCard(D){
   R(0,0,180,33,'#9fd6f2'); R(0,33,180,61,'#62c254');
   [40,60,80].forEach(function(y){R(0,y,180,8,'#52ad46')});
   function tr(x,y){R(x+4,y+12,4,8,'#7a4a2a');R(x,y+4,12,8,'#2f7d3d');R(x+2,y,8,6,'#2f7d3d')}
-  var NX=nextWorkout(); tr(12,22); if(!NX) tr(152,28);
+  var NX=nextWorkout(), AR=archPlan(NX,nextRace(),today(),(location.hash.match(/arch=(\w+)/)||[])[1]); tr(12,22); if(!AR) tr(152,28);
   R(0,76,180,14,'#d8572a');
-  var A=ACT.a[D.act]||ACT.a.idle, K=2, sx=90-A.w*K/2, sy=80-A.h*K+8;
+  var A=ACT.a[D.act]||ACT.a.idle, K=2, sx=(AR?69:90)-A.w*K/2, sy=80-A.h*K+8; // 有拱門時，娃娃站在左邊界與拱門的中間
   var fi=D.act==='run'?1:0; if(fi>=A.f.length) fi=0;
   A.f[fi].forEach(function(r){R(sx+r[1]*K,sy+r[0]*K,r[2]*K,K,'#'+ACT.p[r[3]])});
-  if(NX){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（私人頁面，用課表原名）
-    var AP=archParts(138,92,75,62,16,26,90,(location.hash.match(/arch=(\w+)/)||[])[1]||'gold'), lb=archLabel(wlabel(NX.title,NX.kind),5), fs=Math.max(3,Math.min(6,Math.floor(AP.t.w/lb.length)));
+  if(AR){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（私人頁面，用課表原名）
+    var AP=archParts(138,92,75,60,16,26,90,AR.style), lb=archLabel(AR.label,5), fs=Math.max(3,Math.min(6,Math.floor(AP.t.w/lb.length)));
     AP.r.forEach(function(q){R(q[0],q[1],q[2],q[3],q[4])});
     ctx.fillStyle=AP.t.c; ctx.textAlign='center'; ctx.font=fs+'px '+BODY; ctx.fillText(lb,AP.t.x,AP.t.y); ctx.textAlign='left';
   }

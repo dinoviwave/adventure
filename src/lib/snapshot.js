@@ -32,7 +32,7 @@ export function buildSnapshot({ today, workouts, wellness, ranges }) {
   const nx = workouts.filter((w) => !w.unplanned && w.kind !== '休息' && w.date > today).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
   return {
     date: today, weekNo: wi + 1, weeks: NWEEKS,
-    next: nx ? { date: nx.date, kind: nx.kind, title: nx.title, mins: nx.mins ?? null } : null,
+    next: nx ? { date: nx.date, kind: nx.kind, title: nx.title, mins: nx.mins ?? null, key: !!nx.key } : null,
     race: race && { name: race.name, date: race.date },
     workout: tw ? {
       kind: tw.kind, title: tw.title, mins: tw.mins ?? null, done: !!tw.done,

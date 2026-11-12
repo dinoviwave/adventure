@@ -136,7 +136,7 @@ describe('下一個課表', () => {
     const s = buildSnapshot({ ...base, workouts: [
       { date: '2026-11-06', title: 'T', kind: '跑', mins: 50 }, { date: '2026-11-09', title: 'SECRET2', kind: '休息' },
       { date: '2026-11-10', title: 'SECRET3', kind: '騎', mins: 30 }, { date: '2026-11-08', title: 'X', kind: '跑', mins: 20, unplanned: true } ] });
-    expect(s.next).toEqual({ date: '2026-11-10', kind: '騎', title: 'SECRET3', mins: 30 }); // 課表名稱維持原樣
+    expect(s.next).toEqual({ date: '2026-11-10', kind: '騎', title: 'SECRET3', mins: 30, key: false }); // 課表名稱維持原樣
     expect(JSON.stringify(s)).not.toContain('SECRET2'); // 休息日不會被選為下一個
     expect(buildSnapshot({ ...base, workouts: [] }).next).toBeNull();
   });
@@ -161,6 +161,39 @@ describe('課表短標籤（前端 wlabel）', () => {
     const norm = (x) => x.replace(/\s+/g, '');
     expect(norm(fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
     expect(norm(fs.readFileSync(new URL('../source/showcase_template.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
+  });
+});
+
+describe('終點拱門規則（前端 archPlan）', () => {
+  const wsrc = fs.readFileSync(new URL('../source/wlabel.js', import.meta.url), 'utf8');
+  const asrc = fs.readFileSync(new URL('../source/archplan.js', import.meta.url), 'utf8');
+  const api = new Function(wsrc + asrc + '; return { archPlan, isQuality, raceLabel }')();
+  const race = { name: '南山人壽半馬', date: '2026-11-22' };
+  it('一般課表：沒有拱門（維持原本畫面）', () => {
+    expect(api.archPlan({ title: '南山銳2_MON_跑步Z2', kind: '跑', key: false }, race, '2026-11-12')).toBeNull();
+    expect(api.archPlan(null, race, '2026-11-12')).toBeNull();
+  });
+  it('品質課表（關鍵課表或名稱含節奏、間歇、CP…）：彩旗慶典門，名牌寫短標籤', () => {
+    expect(api.archPlan({ title: '南山銳2_THU_節奏跑', kind: '跑' }, race, '2026-11-12')).toEqual({ style: 'festival', label: '節奏跑' });
+    expect(api.archPlan({ title: '南山銳1_FRI_CP測試', kind: '跑' }, race, '2026-11-12').style).toBe('festival');
+    expect(api.archPlan({ title: '南山銳2_SUN_長跑Z2', kind: '跑', key: true }, race, '2026-11-12').style).toBe('festival');
+  });
+  it('比賽當天：隨機金色或皇家紅毯，名牌寫賽事名稱（即使課表是一般課表）', () => {
+    const seen = new Set();
+    for (let i = 0; i < 60; i++) { const p = api.archPlan({ title: 'a_b_跑步Z2', kind: '跑' }, race, '2026-11-22'); seen.add(p.style); expect(p.label).toBe('南山半馬'); }
+    expect([...seen].sort()).toEqual(['gold', 'royal']);
+  });
+  it('賽事名稱短標籤', () => {
+    expect(api.raceLabel('台北馬拉松 半馬')).toBe('台北半馬');
+    expect(api.raceLabel('南山人壽半馬')).toBe('南山半馬');
+  });
+  it('預覽用 force 可指定風格', () => {
+    expect(api.archPlan({ title: 'a_b_跑步Z2', kind: '跑' }, race, '2026-11-12', 'royal').style).toBe('royal');
+  });
+  it('完整版頁面與展示版模板都內含同一份 archPlan', () => {
+    const norm = (x) => x.replace(/\s+/g, '');
+    expect(norm(fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8'))).toContain(norm(asrc.trim()));
+    expect(norm(fs.readFileSync(new URL('../source/showcase_template.html', import.meta.url), 'utf8'))).toContain(norm(asrc.trim()));
   });
 });
 

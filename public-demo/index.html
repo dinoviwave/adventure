@@ -114,12 +114,12 @@ function archParts(x0,baseN,baseF,ah,dx,bw,tb,style){
     if(style==='gold'){                                                                              // 基座、金球、旗幟
       R.push([x-1,base-4,pw+4,4,S.PS],[x-1,base-4,pw+4,1,O],[x-1,base-1,pw+4,1,O]);
       R.push([x+1,y0-8,4,5,S.PT],[x+3,y0-8,2,5,S.PS],[x+1,y0-8,4,1,O],[x+1,y0-4,4,1,O]);
-      R.push([x+3,y0-17,1,9,O],[x+4,y0-17,6,3,'#e8453c'],[x+4,y0-14,4,1,'#b82e2e']);
+      R.push([x+3,y0-14,1,6,O],[x+4,y0-14,6,3,'#e8453c'],[x+4,y0-11,4,1,'#b82e2e']);
     }
     if(style==='festival'){ R.push([x+2,y0-6,2,4,O],[x+1,y0-8,4,2,'#e8453c']); }                      // 頂端小燈
     if(style==='royal'){                                                                             // 火炬
       R.push([x,y0-6,pw+2,4,'#5b4a2e'],[x,y0-6,pw+2,1,O]);
-      R.push([x+1,y0-13,4,7,'#ff9f1c'],[x+2,y0-16,2,4,'#ffd23f'],[x+2,y0-11,2,3,'#ffd23f']);
+      R.push([x+1,y0-12,4,6,'#ff9f1c'],[x+2,y0-15,2,4,'#ffd23f'],[x+2,y0-10,2,3,'#ffd23f']);
     }
   }
   // 地面終點線：沿兩柱腳之間斜著橫過跑道，格紋（皇家版為紅毯）
@@ -148,6 +148,20 @@ function archParts(x0,baseN,baseF,ah,dx,bw,tb,style){
   R.push([mx-bw/2-1,my-1,bw+2,bh+2,O],[mx-bw/2,my,bw,bh,S.plO],[mx-bw/2+1,my+1,bw-2,bh-2,S.pl]);
   return {r:R,t:{x:mx,y:my+bh-3,w:bw-4,c:S.tx}};
 }
+/* 終點拱門的出現規則與風格（前端；依賴 wlabel）。
+   - 比賽當天：拱門隨機用金色（gold）或皇家紅毯（royal），名牌寫賽事名稱
+   - 品質課表（標記為關鍵課表，或名稱含節奏、間歇、閾值、乳酸、CP、配速、tempo、interval、VO2）：彩旗慶典門（festival），名牌寫課表短標籤
+   - 其他（一般課表）：沒有拱門，維持原本畫面
+   force：預覽用，強制指定風格 */
+function isQuality(w){ return !!w && (w.key===true || /節奏|間歇|閾值|乳酸|CP|配速|tempo|interval|VO2/i.test(String(w.title||''))); }
+function raceLabel(name){ return String(name||'').replace(/人壽|馬拉松|\s/g,''); }
+function archPlan(nx,race,today,force){
+  var st=null,label=null;
+  if(race&&race.date===today){ st=Math.random()<0.5?'gold':'royal'; label=raceLabel(race.name); }
+  else if(nx&&isQuality(nx)){ st='festival'; label=wlabel(nx.title,nx.kind); }
+  if(force==='gold'||force==='festival'||force==='royal'){ if(!st) label=nx?wlabel(nx.title,nx.kind):'終點'; st=force; }
+  return st?{style:st,label:label}:null;
+}
 function archLabel(s,maxChars){s=String(s||'');return s.length>maxChars?s.slice(0,maxChars-1)+'…':s}
 /* 課表原名 → 短標籤（前端顯示用；資料本身不改）。
    「南山銳1_WED_跑步Z2」→「Z2」、「南山銳1_MON_騎車恢復」→「輕鬆騎」、「南山銳2_THU_節奏跑」→「節奏跑」。
@@ -171,15 +185,16 @@ var LBL={ok:'在範圍內',near:'接近邊界',out:'超出範圍',missing:'今�
 var sweat=0; ['rhr','hrv'].forEach(function(k){var s=SNAP.body[k];if(s==='out')sweat=3;else if(s==='near'&&sweat<1)sweat=1});
 function scene(){
   if(!w&&window.REST_ART){var v=REST_ART.pick(),ox=Math.round((220-v.w)/2),oy=Math.round((130-v.h)/2),q='<svg viewBox="0 0 220 130" role="img" aria-label="角色正在休息" shape-rendering="crispEdges"><rect class="m-sky" x="0" y="0" width="220" height="130"/>';v.f[0].forEach(function(r){q+='<rect x="'+(r[1]+ox)+'" y="'+(r[0]+oy)+'" width="'+r[2]+'" height="1" fill="#'+REST_ART.p[r[3]]+'"/>'});return q+'</svg>'}
+  var AR=archPlan(SNAP.next,SNAP.race,SNAP.date,(location.hash.match(/arch=(\w+)/)||[])[1]);
   var s='<svg viewBox="0 0 220 130" role="img" aria-label="角色正在'+ACTN[act]+'" shape-rendering="crispEdges">';
   s+='<rect class="m-sky" x="0" y="0" width="220" height="40"/><rect class="m-grass" x="0" y="40" width="220" height="90"/>';
   for(var y=50;y<130;y+=24) s+='<rect class="m-grass2" x="0" y="'+y+'" width="220" height="10"/>';
   s+='<rect class="m-trunk" x="22" y="42" width="4" height="8"/><rect class="m-leaf2" x="18" y="34" width="12" height="8"/><rect class="m-leaf2" x="20" y="30" width="8" height="6"/>';
-  if(!SNAP.next) s+='<rect class="m-trunk" x="196" y="46" width="4" height="8"/><rect class="m-leaf2" x="192" y="38" width="12" height="8"/><rect class="m-leaf2" x="194" y="34" width="8" height="6"/>';
+  if(!AR) s+='<rect class="m-trunk" x="196" y="46" width="4" height="8"/><rect class="m-leaf2" x="192" y="38" width="12" height="8"/><rect class="m-leaf2" x="194" y="34" width="8" height="6"/>';
   s+='<rect class="m-track" x="0" y="100" width="220" height="14" fill="var(--track)"/>';
-  s+=sprite(110,104,false,act,sweat);
-  if(SNAP.next){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（用短標籤，例如 Z2、輕鬆騎）
-    var AS=(location.hash.match(/arch=(\w+)/)||[])[1]||'gold', A=archParts(160,119,100,66,19,30,114,AS), lb=archLabel(wlabel(SNAP.next.title,SNAP.next.kind),5), fs=Math.max(5,Math.min(8,Math.floor(A.t.w/lb.length)));
+  s+=sprite(AR?80:110,104,false,act,sweat); // 有拱門時，娃娃站在左邊界與拱門的中間
+  if(AR){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（用短標籤，例如 Z2、輕鬆騎）
+    var A=archParts(160,119,100,66,19,30,114,AR.style), lb=archLabel(AR.label,5), fs=Math.max(5,Math.min(8,Math.floor(A.t.w/lb.length)));
     A.r.forEach(function(q){s+='<rect x="'+q[0]+'" y="'+q[1]+'" width="'+q[2]+'" height="'+q[3]+'" fill="'+q[4]+'"/>'});
     s+='<text x="'+A.t.x+'" y="'+A.t.y+'" text-anchor="middle" font-size="'+fs+'" fill="'+A.t.c+'" style="font-family:var(--font-body)">'+esc(lb)+'</text>';
   }
