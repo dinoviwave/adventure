@@ -22,8 +22,8 @@
 | 1 | 建立 Google 專案、OAuth 同意畫面（外部）、網頁應用程式 OAuth 用戶端 | Google Cloud 主控台 | 完成 |
 | 1b | 把兩個帳號加入「目標對象 → 測試使用者」 | Google Auth Platform | **待確認**（未回報） |
 | 2 | 在 Cloudflare 新增 Google 登入方式，並按 Test | Zero Trust → Integrations → Identity providers | 完成（第一次 Test 因舊分頁出現「Unable to find the requested identity provider」，重試成功） |
-| 3a | 全域登入時間設為 1 個月 | Zero Trust → Access controls → Access settings → Set your global session duration | **待確認** |
-| 3b | `adventure` 應用程式的 Session Duration 設為 1 個月 | Access controls → Applications → adventure → Edit | **待確認** |
+| 3a | 全域登入時間設為 1 個月 | Zero Trust → Access controls → Access settings → Set your global session duration | 完成（Dino 回報兩層都已設定，2026-11-12） |
+| 3b | `adventure` 應用程式的 Session Duration 設為 1 個月 | Access controls → Applications → adventure → Edit | 完成（同上） |
 | 4 | `adventure` 只勾 Google、取消 One-time PIN、開啟 Apply instant authentication，並 Save | 同上 | 完成（2026-11-12 先前截圖是舊設定的收驗證碼畫面；調整後已生效） |
 | 5 | 驗證：無痕視窗開網址應直接跳 Google；手機主畫面網頁實測 | 瀏覽器、iPhone | 部分完成：電腦開網址**直接跳 Google**；iPhone 主畫面網頁**直接進到頁面，沒有跳到 Safari 或出現其他畫面**（Dino 回報，2026-11-12）。「幾天內是否不用重登」需要觀察 |
 
@@ -37,8 +37,8 @@
 ## 驗證清單（做完逐項確認）
 
 - [x] Identity providers 列表有 Google，Test 成功
-- [ ] 全域登入時間 = 1 個月
-- [ ] `adventure` 的 Session Duration = 1 個月
+- [x] 全域登入時間 = 1 個月
+- [x] `adventure` 的 Session Duration = 1 個月
 - [x] `adventure` 的登入方式只勾 Google，One-time PIN 已取消
 - [x] Apply instant authentication 已開啟，Save 成功
 - [x] 無痕視窗開網址 → 直接跳 Google（不出現「Send login code」）→ 登入後可編輯
