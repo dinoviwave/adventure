@@ -93,7 +93,7 @@
       return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).format(new Date(iso));
     } catch (e) { return '' }
   }
-  function setBtn(label) {
+  function setBtn(label, line2, title) {
     try {
       if (!btn) {
         btn = document.createElement('button'); btn.id = 'syncBtn'; btn.type = 'button';
@@ -101,12 +101,34 @@
         btn.addEventListener('click', function () { manual() });
         document.body.appendChild(btn);
       }
-      btn.textContent = label;
+      btn.textContent = '';
+      btn.appendChild(document.createTextNode(label));
+      if (line2) {
+        var d2 = document.createElement('div');
+        d2.textContent = line2; d2.style.cssText = 'font-size:12px;line-height:1.4;color:' + ALERT + ';margin-top:2px';
+        btn.appendChild(d2);
+      }
+      btn.title = title || '';
     } catch (e) { /* 按鈕失敗不影響頁面 */ }
   }
-  function updateLabel() { setBtn('↻ ' + (lastOk ? '更新於 ' + hhmm(lastOk) : '更新')) }
+  var st = null, ALERT = '#ee3b3b';
+  // 按鈕：第一行「↻ 更新於 HH:MM」；有問題時多一行紅字（只有文字上色，不整塊上色）：
+  //   最近一次同步失敗 → 「同步失敗：原因（HH:MM）」；超過 24 小時沒有成功同步 → 「超過 N 小時未更新」
+  function updateLabel() {
+    var line1 = '↻ ' + (lastOk ? '更新於 ' + hhmm(lastOk) : '更新'), line2 = null, full = '';
+    if (st && st.failed && st.last) {
+      var why = String(st.last.error || '原因不明').replace(/^(同步失敗|部分讀取失敗)：/, '');
+      full = '最近一次同步失敗（' + hhmm(st.last.t) + '）：' + why;
+      line2 = '同步失敗：' + (why.length > 22 ? why.slice(0, 22) + '…' : why) + '（' + hhmm(st.last.t) + '）';
+    } else if (st && st.staleHours != null && st.staleHours >= 24) {
+      line2 = '超過 ' + st.staleHours + ' 小時未更新'; full = line2;
+    } else if (st && st.lastOkAt == null) {
+      line2 = '尚未成功同步'; full = line2;
+    }
+    setBtn(line1, line2, full);
+  }
   function loadStatus() {
-    return req('GET', 'sync-status').then(function (r) { if (r && r.lastOkAt) lastOk = r.lastOkAt; updateLabel() }, updateLabel);
+    return req('GET', 'sync-status').then(function (r) { if (r) { st = r; if (r.lastOkAt) lastOk = r.lastOkAt } updateLabel() }, updateLabel);
   }
   function runSync(force) {
     if (syncing) return;

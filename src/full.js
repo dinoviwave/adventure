@@ -41,8 +41,12 @@ async function handleApi(request, env, url, who) {
   }
   if (t === 'sync-status') {
     const last = await env.DB.prepare('SELECT * FROM sync_log ORDER BY t DESC LIMIT 1').first();
-    const lastOk = await env.DB.prepare("SELECT t FROM sync_log WHERE error IS NULL ORDER BY t DESC LIMIT 1").first();
-    return json({ last, lastOkAt: lastOk?.t || null });
+    // 成功＝沒有錯誤，或只有「警告：」開頭的提示（例如課表數為 0 時未執行刪除）
+    const lastOk = await env.DB.prepare("SELECT t FROM sync_log WHERE error IS NULL OR error LIKE '警告%' ORDER BY t DESC LIMIT 1").first();
+    const failed = !!(last && last.error && !String(last.error).startsWith('警告'));
+    const nowIso = new Date().toISOString();
+    const staleHours = lastOk ? Math.floor((Date.parse(nowIso) - Date.parse(lastOk.t)) / 3600e3) : null;
+    return json({ last, lastOkAt: lastOk?.t || null, failed, staleHours, now: nowIso });
   }
   if (!WRITABLE.includes(t)) return err(404, 'not_found', '沒有這個資源');
   if (m !== 'GET' && who.role !== 'editor') return err(403, 'read_only', '目前只能檢視，無法修改資料');

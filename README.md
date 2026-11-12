@@ -47,3 +47,6 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 
 ## 資料庫升級（有新的 migrations 時）
 拉到新版程式後，若 `migrations/` 有新檔案，先升級遠端資料庫再部署：`npm run db:remote`（會列出待套用的檔案並要求確認），再 `npm run update`。2026-11-12 的 `0002_sync_log_detail.sql` 為 `sync_log` 加 `detail` 欄位；沒套用時，排程同步的紀錄寫入會失敗（Cloudflare 指標顯示「未發現的例外」）。
+
+## 同步狀態提示
+右下角「↻」按鈕會顯示最近一次成功同步時間。最近一次同步失敗時多一行紅字（含原因與時間）；超過 24 小時沒有成功同步或從未成功同步時，也會多一行紅字提醒。資料來自 `GET /api/sync-status`（`failed`、`staleHours`）；錯誤開頭為「警告：」的紀錄視為成功。
