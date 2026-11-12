@@ -3,6 +3,10 @@ main = "src/full.js"
 compatibility_date = "2026-01-01"
 workers_dev = true
 
+[[routes]]
+pattern = "adventure.dino.tw"
+custom_domain = true   # 自訂網域；網域需在同一個 Cloudflare 帳號且為有效 zone
+
 [assets]
 directory = "./public"
 binding = "ASSETS"

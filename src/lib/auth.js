@@ -28,7 +28,8 @@ export async function verifyAccessJwt(token, env) {
   const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64u(s), new TextEncoder().encode(h + '.' + p));
   if (!ok) throw new Error('sig');
   const aud = Array.isArray(pay.aud) ? pay.aud : [pay.aud];
-  if (!aud.includes(env.ACCESS_AUD)) throw new Error('aud');
+  const allowed = String(env.ACCESS_AUD || '').split(',').map((x) => x.trim()).filter(Boolean); // 可填多個 AUD（逗號分隔）
+  if (!allowed.some((x) => aud.includes(x))) throw new Error('aud');
   if (pay.iss !== `https://${teamHost(env.ACCESS_TEAM_DOMAIN)}`) throw new Error('iss');
   if (!pay.exp || pay.exp * 1000 < Date.now()) throw new Error('exp');
   return pay;

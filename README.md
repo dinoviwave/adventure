@@ -50,3 +50,15 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 
 ## 同步狀態提示
 右下角「↻」按鈕會顯示最近一次成功同步時間。最近一次同步失敗時多一行紅字（含原因與時間）；超過 24 小時沒有成功同步或從未成功同步時，也會多一行紅字提醒。資料來自 `GET /api/sync-status`（`failed`、`staleHours`）；錯誤開頭為「警告：」的紀錄視為成功。
+
+## 自訂網域（dino.tw）
+| 網址 | 對應 | 保護 |
+|---|---|---|
+| `adventure.dino.tw` | 完整版 `adventure` | Cloudflare Access（Google 登入） |
+| `quest.dino.tw` | 展示版 `adventure-demo` | 公開，**不可**放在 Access 範圍內 |
+
+- 設定在 `wrangler.toml` 與 `wrangler.demo.toml` 的 `[[routes]]`（`custom_domain = true`）。部署時 Cloudflare 會自動建立 DNS 記錄與憑證；網域必須是同一個 Cloudflare 帳號裡有效的 zone，且該主機名稱不能已有 CNAME 記錄。
+- Access：若 `adventure` 是用「保護整個 Worker」，官方說明會自動涵蓋它所有的網域，不用另外加。若是「依主機名稱」保護，要到 Zero Trust → Access controls → Applications → adventure → Edit，加入 `adventure.dino.tw`。若新增了另一個 Access 應用程式，把它的 AUD 加進 `ACCESS_AUD`（逗號分隔，可填多個）。
+- 展示版 `quest.dino.tw` 要公開：確認帳號沒有開「Protect all Workers」，也沒有把它納入任何 Access 應用程式。
+- 換網址後登入狀態是依網址分開的，需重新登入一次；iPhone 主畫面要用新網址重新加入。
+- `workers.dev` 網址先保留作為過渡，確認新網址都正常後，再把兩份設定的 `workers_dev` 改成 `false` 關閉。
