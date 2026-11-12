@@ -39,13 +39,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .box{background:var(--panel);border:3px solid var(--line);box-shadow:4px 4px 0 var(--line);padding:14px}
 
 header .kicker{font-family:var(--font-display);font-size:9px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
-.finl{border:3px solid var(--line);background:var(--panel);box-shadow:4px 4px 0 var(--line);margin-bottom:14px}
-.finl i{display:block;height:12px;background-image:conic-gradient(#13203d 25%,#fff 0 50%,#13203d 0 75%,#fff 0);background-size:12px 12px;border-bottom:3px solid var(--line)}
-.finl .fb{padding:10px 14px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.finl .fk{font-family:var(--font-display);font-size:9px;color:var(--muted);letter-spacing:.08em}
-.finl .fkd{display:inline-block;min-width:2em;text-align:center;border:2px solid var(--line);background:var(--panel2);font-family:var(--font-display);font-size:12px;padding:3px 6px}
-.finl .fn{font-size:16px;overflow-wrap:anywhere}
-.finl .fm{color:var(--muted);font-size:13px;width:100%}
 header h1{font-family:var(--font-display);font-size:clamp(17px,5.4vw,26px);line-height:1.35;margin-top:8px;text-wrap:balance}
 header p{margin-top:8px;color:var(--muted);font-size:14px}
 
@@ -171,8 +164,6 @@ details.rules p{margin-top:6px}
 
   <div id="note" class="note" hidden></div>
   <section class="hud" id="hud" aria-label="目前狀態"></section>
-
-  <section class="finl" id="finl" aria-label="下一個課表" hidden></section>
 
   <section class="box body" id="body" aria-label="身體訊號"></section>
 
@@ -556,17 +547,9 @@ function syncForm(){
   d.min=ws; d.max=we;
   if(!d.value||d.value<ws||d.value>we) d.value=(t>=ws&&t<=we)?t:ws;
 }
-function renderNext(){
-  var el=$('finl'), t=today();
-  var nx=workouts.filter(function(w){return !w.unplanned&&w.kind!=='休息'&&w.date>t}).sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0)})[0];
-  if(!nx){el.hidden=true;el.innerHTML='';return}
-  el.hidden=false;
-  el.innerHTML='<i aria-hidden="true"></i><div class="fb"><span class="fk">NEXT</span><span class="fkd">'+esc(nx.kind)+'</span><span class="fn">'+esc(nx.title)+'</span><span class="fm">'+md(nx.date)+'（'+wk(nx.date)+'）'+(nx.mins?'・'+nx.mins+' 分':'')+'</span></div>';
-}
 function render(){
   if(!sel) sel={type:'week',id:String(curIdx())};
   renderHud();
-  renderNext();
   renderBody();
   $('map').innerHTML=buildMap();
   renderPanel();
@@ -747,6 +730,40 @@ function cfit(ctx,text,maxW,size,font){
   while(ctx.measureText(text).width>maxW&&z>10){z--;ctx.font=z+'px '+font}
   return text;
 }
+/* 終點拱門（斜向立體，pixel 方塊）：回傳 {r:[[x,y,w,h,色]...], t:{x,y,w}}；t 是拱門橫樑上放文字的位置 */
+function archParts(x0,base,aw,ah){
+  var O='#13203d',W='#ffffff',PF='#dfe9f7',PS='#8fa3c4',PT='#f4f8ff',SH='#7ea05a',d=4,pw=7,lh=14,top=base-ah,R=[];
+  function box(x,y,bw,bh){
+    var k;
+    for(k=0;k<d;k++) R.push([x+k+1,y-k-1,bw,1,PT]);           // 頂面
+    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,bh,PS]);          // 側面（深一階）
+    R.push([x,y,bw,bh,PF]);                                    // 正面
+    R.push([x,y,bw,1,O],[x,y+bh-1,bw,1,O],[x,y,1,bh,O],[x+bw-1,y,1,bh,O]); // 正面外框
+    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,1,O]);            // 側面上緣
+  }
+  R.push([x0+2,base,aw+d,2,SH]);                              // 地面影子
+  box(x0,top+lh-2,pw,ah-lh+2);                                // 左柱
+  box(x0+aw-pw,top+lh-2,pw,ah-lh+2);                          // 右柱
+  box(x0,top,aw,lh);                                          // 橫樑
+  var i,n=Math.floor((aw-2)/3);
+  for(i=0;i<n;i++){ R.push([x0+1+i*3,top+1,3,3,i%2?W:O]); R.push([x0+1+i*3,top+lh-4,3,3,i%2?O:W]); } // 上下格紋
+  R.push([x0+1,top+4,aw-2,lh-8,W]);                           // 中間白底（放文字）
+  return {r:R,t:{x:x0+aw/2,y:top+lh-5,w:aw-6}};
+}
+function archLabel(s,maxChars){s=String(s||'');return s.length>maxChars?s.slice(0,maxChars-1)+'…':s}
+/* 課表原名 → 短標籤（前端顯示用；資料本身不改）。
+   「南山銳1_WED_跑步Z2」→「Z2」、「南山銳1_MON_騎車恢復」→「輕鬆騎」、「南山銳2_THU_節奏跑」→「節奏跑」。
+   名稱不是「計畫_星期_內容」格式（例如活動名稱含地名）時，只顯示類型。 */
+function wlabel(title,kind){
+  var K={'跑':'跑步','騎':'騎車','游':'游泳','肌力':'肌力訓練'}, C={'跑':'跑','騎':'騎','游':'游'};
+  var parts=String(title||'').split('_');
+  if(parts.length<3) return K[kind]||kind||'其他';
+  var s=parts.slice(2).join('_').replace(/恢復/g,'輕鬆').replace(/跑步|騎車|游泳/g,'').trim();
+  if(!s) return K[kind]||kind||'其他';
+  if(s==='輕鬆') return '輕鬆'+(C[kind]||'');
+  return s;
+}
+function nextWorkout(){var t=today();return workouts.filter(function(w){return !w.unplanned&&w.kind!=='休息'&&w.date>t}).sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0)})[0]||null}
 function drawCard(D){
   var cv=document.createElement('canvas'); cv.width=1080; cv.height=1920;
   var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.scale(3,3);
@@ -768,11 +785,16 @@ function drawCard(D){
   R(0,0,180,33,'#9fd6f2'); R(0,33,180,61,'#62c254');
   [40,60,80].forEach(function(y){R(0,y,180,8,'#52ad46')});
   function tr(x,y){R(x+4,y+12,4,8,'#7a4a2a');R(x,y+4,12,8,'#2f7d3d');R(x+2,y,8,6,'#2f7d3d')}
-  tr(12,22); tr(152,28);
+  var NX=nextWorkout(); tr(12,22); if(!NX) tr(152,28);
   R(0,76,180,14,'#d8572a');
   var A=ACT.a[D.act]||ACT.a.idle, K=2, sx=90-A.w*K/2, sy=80-A.h*K+8;
   var fi=D.act==='run'?1:0; if(fi>=A.f.length) fi=0;
   A.f[fi].forEach(function(r){R(sx+r[1]*K,sy+r[0]*K,r[2]*K,K,'#'+ACT.p[r[3]])});
+  if(NX){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（私人頁面，用課表原名）
+    var AP=archParts(136,76,36,42), lb=archLabel(wlabel(NX.title,NX.kind),6), fs=Math.max(3,Math.min(6,Math.floor(AP.t.w/lb.length)));
+    AP.r.forEach(function(q){R(q[0],q[1],q[2],q[3],q[4])});
+    ctx.fillStyle='#13203d'; ctx.textAlign='center'; ctx.font=fs+'px '+BODY; ctx.fillText(lb,AP.t.x,AP.t.y); ctx.textAlign='left';
+  }
   var P=(SWEAT[D.act]||SWEAT.idle).slice(0,D.sweat), u=2;
   function dshape(x,y,fill,dark,tip){
     DROP.forEach(function(row,ry){for(var cx=0;cx<row.length;cx++){var ch=row.charAt(cx); if(ch==='.') continue; R(x+cx*u,y+ry*u,u,u,ch==='c'?dark:(ch==='a'?tip:fill))}});

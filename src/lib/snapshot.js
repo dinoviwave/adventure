@@ -1,4 +1,4 @@
-// 展示版快照：只組出淨化後的欄位（規格第八節；2026-11-12 起不輸出課表原名與活動名稱，只給類型）。不含 desc、心率、HRV、睡眠、CTL/ATL、note 內的心率與負荷。
+// 展示版快照：只組出淨化後的欄位（規格第八節；課表名稱維持原樣，要怎麼顯示由前端決定）。不含 desc、心率、HRV、睡眠、CTL/ATL、note 內的心率與負荷。
 export const START = '2026-11-02', NWEEKS = 7;
 export const RACES = [
   { id: 'nanshan', name: '南山人壽半馬', date: '2026-11-22' },
@@ -26,16 +26,16 @@ export function buildSnapshot({ today, workouts, wellness, ranges }) {
   const race = RACES.find((x) => x.date >= today) || null;
   const extras = workouts.filter((w) => w.unplanned && w.date === today).map((w) => {
     const km = /([\d.]+)\s*km/.exec(w.note || ''), mn = /(\d+)\s*分/.exec(w.note || '');
-    return { kind: w.kind, km: km ? Number(km[1]) : null, min: mn ? Number(mn[1]) : null }; // 不輸出活動名稱（常含地名）
+    return { title: w.title, km: km ? Number(km[1]) : null, min: mn ? Number(mn[1]) : null };
   });
-  // 下一個課表：今天之後最近一筆「有排的訓練」（休息、計畫外不算）；公開版只給類型、日期、時長
+  // 下一個課表：今天之後最近一筆「有排的訓練」（休息、計畫外不算）；新增欄位，內容不轉換
   const nx = workouts.filter((w) => !w.unplanned && w.kind !== '休息' && w.date > today).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
   return {
     date: today, weekNo: wi + 1, weeks: NWEEKS,
-    next: nx ? { date: nx.date, kind: nx.kind, mins: nx.mins ?? null } : null,
+    next: nx ? { date: nx.date, kind: nx.kind, title: nx.title, mins: nx.mins ?? null } : null,
     race: race && { name: race.name, date: race.date },
     workout: tw ? {
-      kind: tw.kind, mins: tw.mins ?? null, done: !!tw.done, // 不輸出課表原名，只給類型
+      kind: tw.kind, title: tw.title, mins: tw.mins ?? null, done: !!tw.done,
       actual: tw.done && tw.actual ? { km: tw.actual.km ?? null, min: tw.actual.min ?? null } : null,
     } : null,
     extras,

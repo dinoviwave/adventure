@@ -8,5 +8,5 @@ echo "展示版（預期 / 與 /api/snapshot 為 200，其餘 /api/* 為 404）"
 curl -s -m 20 "https://$DEMO/api/snapshot" | python3 -c "
 import sys,json,re
 raw=sys.stdin.read(); d=json.loads(raw)
-bad=re.findall(r'bpm|@|\"(?:title|desc|note|email|avgHr|load|ctl|atl|tsb|sleepH?|sleepScore)\"',raw)
+bad=re.findall(r'bpm|@|\"(?:desc|note|email|avgHr|load|ctl|atl|tsb|sleepH?|sleepScore)\"',raw)
 print('  禁止欄位或內容：', bad or '無'); print('  body：', d.get('body'))"

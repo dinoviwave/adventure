@@ -40,12 +40,6 @@ h1,h2,p{margin:0}
 .chip i{flex:none;width:18px;height:18px;border:2px solid var(--line);display:block}
 .chip.ok i{background:#4cc23f}.chip.out i{background:#ee3b3b}.chip.near i{background:#f2c230}.chip.missing i{background:#fff}
 .legend{margin-top:8px;color:var(--muted);font-size:12px}
-.finl{border-top:3px solid var(--line);background:var(--panel)}
-.finl i{display:block;height:12px;background-image:conic-gradient(#13203d 25%,#fff 0 50%,#13203d 0 75%,#fff 0);background-size:12px 12px;border-bottom:3px solid var(--line)}
-.finl .fb{padding:10px 16px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.finl .fk{font-family:var(--font-display);font-size:9px;color:var(--muted);letter-spacing:.08em}
-.finl .fn{font-size:16px}
-.finl .fm{color:var(--muted);font-size:13px;width:100%}
 .ft{padding:10px 16px;border-top:3px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 @keyframes sweat{0%{transform:translateY(0);opacity:1}75%{transform:translateY(8px);opacity:1}100%{transform:translateY(12px);opacity:0}}
 .sdrop{animation:sweat .9s steps(5,end) infinite}
@@ -98,6 +92,39 @@ function sprite(x,y,left,act,lvl){
   return out+'</g></g>';
 }
 var WD=['日','一','二','三','四','五','六'];
+/* 終點拱門（斜向立體，pixel 方塊）：回傳 {r:[[x,y,w,h,色]...], t:{x,y,w}}；t 是拱門橫樑上放文字的位置 */
+function archParts(x0,base,aw,ah){
+  var O='#13203d',W='#ffffff',PF='#dfe9f7',PS='#8fa3c4',PT='#f4f8ff',SH='#7ea05a',d=4,pw=7,lh=14,top=base-ah,R=[];
+  function box(x,y,bw,bh){
+    var k;
+    for(k=0;k<d;k++) R.push([x+k+1,y-k-1,bw,1,PT]);           // 頂面
+    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,bh,PS]);          // 側面（深一階）
+    R.push([x,y,bw,bh,PF]);                                    // 正面
+    R.push([x,y,bw,1,O],[x,y+bh-1,bw,1,O],[x,y,1,bh,O],[x+bw-1,y,1,bh,O]); // 正面外框
+    for(k=0;k<d;k++) R.push([x+bw+k,y-k-1,1,1,O]);            // 側面上緣
+  }
+  R.push([x0+2,base,aw+d,2,SH]);                              // 地面影子
+  box(x0,top+lh-2,pw,ah-lh+2);                                // 左柱
+  box(x0+aw-pw,top+lh-2,pw,ah-lh+2);                          // 右柱
+  box(x0,top,aw,lh);                                          // 橫樑
+  var i,n=Math.floor((aw-2)/3);
+  for(i=0;i<n;i++){ R.push([x0+1+i*3,top+1,3,3,i%2?W:O]); R.push([x0+1+i*3,top+lh-4,3,3,i%2?O:W]); } // 上下格紋
+  R.push([x0+1,top+4,aw-2,lh-8,W]);                           // 中間白底（放文字）
+  return {r:R,t:{x:x0+aw/2,y:top+lh-5,w:aw-6}};
+}
+function archLabel(s,maxChars){s=String(s||'');return s.length>maxChars?s.slice(0,maxChars-1)+'…':s}
+/* 課表原名 → 短標籤（前端顯示用；資料本身不改）。
+   「南山銳1_WED_跑步Z2」→「Z2」、「南山銳1_MON_騎車恢復」→「輕鬆騎」、「南山銳2_THU_節奏跑」→「節奏跑」。
+   名稱不是「計畫_星期_內容」格式（例如活動名稱含地名）時，只顯示類型。 */
+function wlabel(title,kind){
+  var K={'跑':'跑步','騎':'騎車','游':'游泳','肌力':'肌力訓練'}, C={'跑':'跑','騎':'騎','游':'游'};
+  var parts=String(title||'').split('_');
+  if(parts.length<3) return K[kind]||kind||'其他';
+  var s=parts.slice(2).join('_').replace(/恢復/g,'輕鬆').replace(/跑步|騎車|游泳/g,'').trim();
+  if(!s) return K[kind]||kind||'其他';
+  if(s==='輕鬆') return '輕鬆'+(C[kind]||'');
+  return s;
+}
 var KN={'跑':'跑步','騎':'騎車','游':'游泳','肌力':'肌力訓練'}; function kn(k){return KN[k]||k||'其他'}
 function p(s){var a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2],12)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -112,22 +139,26 @@ function scene(){
   s+='<rect class="m-sky" x="0" y="0" width="220" height="40"/><rect class="m-grass" x="0" y="40" width="220" height="90"/>';
   for(var y=50;y<130;y+=24) s+='<rect class="m-grass2" x="0" y="'+y+'" width="220" height="10"/>';
   s+='<rect class="m-trunk" x="22" y="42" width="4" height="8"/><rect class="m-leaf2" x="18" y="34" width="12" height="8"/><rect class="m-leaf2" x="20" y="30" width="8" height="6"/>';
-  s+='<rect class="m-trunk" x="196" y="46" width="4" height="8"/><rect class="m-leaf2" x="192" y="38" width="12" height="8"/><rect class="m-leaf2" x="194" y="34" width="8" height="6"/>';
+  if(!SNAP.next) s+='<rect class="m-trunk" x="196" y="46" width="4" height="8"/><rect class="m-leaf2" x="192" y="38" width="12" height="8"/><rect class="m-leaf2" x="194" y="34" width="8" height="6"/>';
   s+='<rect class="m-track" x="0" y="100" width="220" height="14" fill="var(--track)"/>';
   s+=sprite(110,104,false,act,sweat);
+  if(SNAP.next){ // 右側的終點拱門，橫樑上寫下一個課表的名稱（用短標籤，例如 Z2、輕鬆騎）
+    var A=archParts(166,112,46,52), lb=archLabel(wlabel(SNAP.next.title,SNAP.next.kind),6), fs=Math.max(4,Math.min(8,Math.floor(A.t.w/lb.length)));
+    A.r.forEach(function(q){s+='<rect x="'+q[0]+'" y="'+q[1]+'" width="'+q[2]+'" height="'+q[3]+'" fill="'+q[4]+'"/>'});
+    s+='<text x="'+A.t.x+'" y="'+A.t.y+'" text-anchor="middle" font-size="'+fs+'" fill="#13203d" style="font-family:var(--font-body)">'+esc(lb)+'</text>';
+  }
   return s+'</svg>';
 }
 var h='<div class="hd"><h1>TODAY\'S QUEST</h1><div class="dt">'+(d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）</div></div>';
 h+='<div class="scene">'+scene()+'</div>';
-if(SNAP.next){var nd=p(SNAP.next.date);h+='<div class="finl" aria-label="下一個課表"><i aria-hidden="true"></i><div class="fb"><span class="fk">NEXT</span><span class="kd">'+esc(SNAP.next.kind)+'</span><span class="fn">'+esc(kn(SNAP.next.kind))+'</span><span class="fm">'+(nd.getMonth()+1)+'/'+nd.getDate()+'（'+WD[nd.getDay()]+'）'+(SNAP.next.mins?'・'+SNAP.next.mins+' 分':'')+'</span></div></div>'}
 h+='<section class="sec"><h2>今天的課表</h2>';
 if(w){
-  h+='<div class="wk"><span class="kd">'+esc(w.kind)+'</span><span class="wt">'+esc(kn(w.kind))+'</span></div>';
+  h+='<div class="wk"><span class="kd">'+esc(w.kind)+'</span><span class="wt">'+esc(wlabel(w.title,w.kind))+'</span></div>';
   h+='<div class="meta">計畫 '+w.mins+' 分</div>';
   if(w.done){h+='<span class="st done">完成</span>'+(w.actual?'<div class="meta">實際 '+(w.actual.km?w.actual.km+' 公里・':'')+w.actual.min+' 分</div>':'')}
   else h+='<span class="st todo">還沒完成</span>';
 }else h+='<div class="wt">今天休息</div>';
-if(SNAP.extras&&SNAP.extras.length){h+='<div class="meta">另外完成：'+SNAP.extras.map(function(x){return esc(kn(x.kind))+(x.km?'（'+x.km+' 公里・'+x.min+' 分）':'')}).join('、')+'</div>'}
+if(SNAP.extras&&SNAP.extras.length){h+='<div class="meta">另外完成：'+SNAP.extras.map(function(x){return esc(wlabel(x.title,x.kind))+(x.km?'（'+x.km+' 公里・'+x.min+' 分）':'')}).join('、')+'</div>'}
 h+='</section>';
 h+='<section class="sec"><h2>備賽進度</h2><div class="big">第 '+SNAP.weekNo+' 週 / '+SNAP.weeks+'</div>';
 h+='<div class="meta">距離 '+esc(SNAP.race.name)+' 還有 '+days+' 天</div>';
@@ -137,7 +168,7 @@ h+='</div></section>';
 h+='<section class="sec"><h2>身體訊號</h2><div class="chips">';
 [['rhr','靜息心率'],['hrv','HRV']].forEach(function(x){var s=SNAP.body[x[0]];h+='<div class="chip '+s+'"><i></i><span>'+x[1]+'<br>'+LBL[s]+'</span></div>'});
 h+='</div><div class="legend">綠＝在自己設的範圍內　紅＝超出　白＝還沒資料。紅色時角色會流汗。</div></section>';
-h+='<div class="ft"><span>Dino's Big Adventure</span><span>© '+new Date().getFullYear()+' dino.tw</span></div>';
+h+='<div class="ft"><span>Dino&#39;s Big Adventure</span><span>© '+new Date().getFullYear()+' dino.tw</span></div>';
 document.getElementById('card').innerHTML=h;
 }).catch(function(e){try{console.error('展示版載入失敗：',e)}catch(_){}document.getElementById('card').innerHTML='<div class="sec">資料暫時讀不到，請稍後再試。</div>'});
 })();
