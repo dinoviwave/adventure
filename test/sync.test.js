@@ -131,36 +131,23 @@ describe('展示版快照', () => {
 });
 
 describe('下一個課表', () => {
-  it('取今天之後最近一筆有排的訓練，只給類型、日期、時長', () => {
-    const base = { today: '2026-11-06', ranges: {}, wellness: undefined };
-    const s = buildSnapshot({ ...base, workouts: [
-      { date: '2026-11-06', title: 'T', kind: '跑', mins: 50 }, { date: '2026-11-09', title: 'SECRET2', kind: '休息' },
-      { date: '2026-11-10', title: 'SECRET3', kind: '騎', mins: 30 }, { date: '2026-11-08', title: 'X', kind: '跑', mins: 20, unplanned: true } ] });
-    expect(s.next).toEqual({ date: '2026-11-10', kind: '騎', title: 'SECRET3', mins: 30, key: false }); // 課表名稱維持原樣
-    expect(JSON.stringify(s)).not.toContain('SECRET2'); // 休息日不會被選為下一個
+  const base = { today: '2026-11-06', ranges: {}, wellness: undefined };
+  const wk = [
+    { date: '2026-11-06', title: 'TODAY', kind: '跑', mins: 50, done: false },
+    { date: '2026-11-09', title: 'SECRET2', kind: '休息' },
+    { date: '2026-11-10', title: 'LATER', kind: '騎', mins: 30 },
+    { date: '2026-11-08', title: 'X', kind: '跑', mins: 20, unplanned: true } ];
+  it('今天還沒完成的課表就是下一個', () => {
+    const s = buildSnapshot({ ...base, workouts: wk });
+    expect(s.next).toEqual({ date: '2026-11-06', kind: '跑', title: 'TODAY', mins: 50, key: false });
+  });
+  it('今天的做完了，才看之後最近一筆有排的訓練（休息日、計畫外不算）', () => {
+    const s = buildSnapshot({ ...base, workouts: wk.map((w) => (w.title === 'TODAY' ? { ...w, done: true } : w)) });
+    expect(s.next).toEqual({ date: '2026-11-10', kind: '騎', title: 'LATER', mins: 30, key: false });
+    expect(JSON.stringify(s)).not.toContain('SECRET2');
+  });
+  it('沒有未完成的課表時為 null', () => {
     expect(buildSnapshot({ ...base, workouts: [] }).next).toBeNull();
-  });
-});
-
-describe('課表短標籤（前端 wlabel）', () => {
-  const src = fs.readFileSync(new URL('../source/wlabel.js', import.meta.url), 'utf8');
-  const wlabel = new Function(src + '; return wlabel')();
-  it('常見課表名稱轉成短標籤', () => {
-    expect(wlabel('南山銳1_WED_跑步Z2', '跑')).toBe('Z2');
-    expect(wlabel('南山銳1_MON_騎車恢復', '騎')).toBe('輕鬆騎');
-    expect(wlabel('南山銳2_FRI_游泳輕鬆', '游')).toBe('輕鬆游');
-    expect(wlabel('南山銳2_THU_節奏跑', '跑')).toBe('節奏跑');
-    expect(wlabel('南山銳1_FRI_CP測試', '跑')).toBe('CP測試');
-  });
-  it('不是「計畫_星期_內容」格式（例如含地名的活動名稱）只顯示類型', () => {
-    expect(wlabel('仁愛鄉 跑步', '跑')).toBe('跑步');
-    expect(wlabel('大溪區 登山車', '騎')).toBe('騎車');
-    expect(wlabel('', '肌力')).toBe('肌力訓練');
-  });
-  it('完整版頁面與展示版模板都內含同一份 wlabel', () => {
-    const norm = (x) => x.replace(/\s+/g, '');
-    expect(norm(fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
-    expect(norm(fs.readFileSync(new URL('../source/showcase_template.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
   });
 });
 

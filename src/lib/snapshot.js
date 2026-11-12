@@ -28,8 +28,8 @@ export function buildSnapshot({ today, workouts, wellness, ranges }) {
     const km = /([\d.]+)\s*km/.exec(w.note || ''), mn = /(\d+)\s*分/.exec(w.note || '');
     return { title: w.title, km: km ? Number(km[1]) : null, min: mn ? Number(mn[1]) : null };
   });
-  // 下一個課表：今天之後最近一筆「有排的訓練」（休息、計畫外不算）；新增欄位，內容不轉換
-  const nx = workouts.filter((w) => !w.unplanned && w.kind !== '休息' && w.date > today).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
+  // 下一個課表：從今天起最近一筆「還沒完成的訓練」（今天的還沒完成就是今天的；休息、計畫外不算）；新增欄位，內容不轉換
+  const nx = workouts.filter((w) => !w.unplanned && w.kind !== '休息' && (w.date > today || (w.date === today && !w.done))).sort((a, b) => (a.date < b.date ? -1 : 1))[0];
   return {
     date: today, weekNo: wi + 1, weeks: NWEEKS,
     next: nx ? { date: nx.date, kind: nx.kind, title: nx.title, mins: nx.mins ?? null, key: !!nx.key } : null,

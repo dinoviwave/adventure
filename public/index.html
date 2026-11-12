@@ -813,7 +813,7 @@ function wlabel(title,kind){
   if(s==='輕鬆') return '輕鬆'+(C[kind]||'');
   return s;
 }
-function nextWorkout(){var t=today();return workouts.filter(function(w){return !w.unplanned&&w.kind!=='休息'&&w.date>t}).sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0)})[0]||null}
+function nextWorkout(){var t=today();return workouts.filter(function(w){return !w.unplanned&&w.kind!=='休息'&&(w.date>t||(w.date===t&&!w.done))}).sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0)})[0]||null}
 function drawCard(D){
   var cv=document.createElement('canvas'); cv.width=1080; cv.height=1920;
   var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.scale(3,3);
