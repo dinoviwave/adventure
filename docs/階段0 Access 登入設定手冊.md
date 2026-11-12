@@ -24,8 +24,8 @@
 | 2 | 在 Cloudflare 新增 Google 登入方式，並按 Test | Zero Trust → Integrations → Identity providers | 完成（第一次 Test 因舊分頁出現「Unable to find the requested identity provider」，重試成功） |
 | 3a | 全域登入時間設為 1 個月 | Zero Trust → Access controls → Access settings → Set your global session duration | **待確認** |
 | 3b | `adventure` 應用程式的 Session Duration 設為 1 個月 | Access controls → Applications → adventure → Edit | **待確認** |
-| 4 | `adventure` 只勾 Google、取消 One-time PIN、開啟 Apply instant authentication，並 Save | 同上 | **未生效**：2026-11-12 的截圖仍是「Send login code」收驗證碼畫面 |
-| 5 | 驗證：無痕視窗開網址應直接跳 Google；手機主畫面網頁實測 | 瀏覽器、iPhone | **待重測** |
+| 4 | `adventure` 只勾 Google、取消 One-time PIN、開啟 Apply instant authentication，並 Save | 同上 | 完成（2026-11-12 先前截圖是舊設定的收驗證碼畫面；調整後已生效） |
+| 5 | 驗證：無痕視窗開網址應直接跳 Google；手機主畫面網頁實測 | 瀏覽器、iPhone | 部分完成：電腦開網址**直接跳 Google**；iPhone 主畫面網頁**直接進到頁面，沒有跳到 Safari 或出現其他畫面**（Dino 回報，2026-11-12）。「幾天內是否不用重登」需要觀察 |
 
 ## 重要觀念（官方文件）
 
@@ -36,14 +36,15 @@
 
 ## 驗證清單（做完逐項確認）
 
-- [ ] Identity providers 列表有 Google，Test 成功
+- [x] Identity providers 列表有 Google，Test 成功
 - [ ] 全域登入時間 = 1 個月
 - [ ] `adventure` 的 Session Duration = 1 個月
-- [ ] `adventure` 的登入方式只勾 Google，One-time PIN 已取消
-- [ ] Apply instant authentication 已開啟，Save 成功
-- [ ] 無痕視窗開網址 → 直接跳 Google（不出現「Send login code」）→ 登入後可編輯
+- [x] `adventure` 的登入方式只勾 Google，One-time PIN 已取消
+- [x] Apply instant authentication 已開啟，Save 成功
+- [x] 無痕視窗開網址 → 直接跳 Google（不出現「Send login code」）→ 登入後可編輯
 - [ ] 太太的帳號登入 → 顯示「目前只能檢視」，勾選被擋
-- [ ] iPhone 主畫面網頁：在該網頁內完成登入；幾天內不需重登；記錄是否跳到 Safari（待查證清單第 14 項）
+- [x] iPhone 主畫面網頁：沒有跳到 Safari，直接進到頁面（2026-11-12）
+- [ ] 觀察：幾天到一個月內是否不需重登（持續記錄，若又要求登入，記下日期與間隔）
 
 ## 疑難排解
 
