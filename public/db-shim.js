@@ -4,7 +4,7 @@
   'use strict';
   var API = '/api/';
   var listeners = []; // {kind:'col'|'doc', path, cb, errCb}
-  var me = { canWrite: true };
+  var me = { canWrite: true }, meLoaded = false;
 
   function fail(status, msg) { var e = new Error(msg || ('HTTP ' + status)); e.status = status; e.code = status === 403 ? 'invalid_argument' : 'unavailable'; return e }
   function req(method, path, body) {
@@ -143,11 +143,11 @@
       }
       loadStatus();
       showBar('同步失敗：' + (r.error ? String(r.error).replace(/^同步失敗：/, '') : '原因不明') + '（目前顯示上次的資料，點一下關閉）', 'err', true);
-    }, function () { syncing = false; loadStatus(); showBar('同步失敗：連不到伺服器（目前顯示上次的資料，點一下關閉）', 'err', true) });
+    }, function (e) { syncing = false; loadStatus(); showBar((e && e.status === 403 ? '同步失敗：沒有權限，請重新登入' : '同步失敗：連不到伺服器') + '（目前顯示上次的資料，點一下關閉）', 'err', true) });
   }
   // 打開、切回 App、從背景回來：自動更新（伺服器端有冷卻，排程剛跑過就不會重複同步）。只有可編輯者能觸發同步
   var lastOpenAt = 0;
-  function syncOnOpen() { if (Date.now() - lastOpenAt < 2000) return; lastOpenAt = Date.now(); refresh(); loadStatus(); if (me.canWrite) runSync(false); }
+  function syncOnOpen() { if (!meLoaded || Date.now() - lastOpenAt < 2000) return; lastOpenAt = Date.now(); refresh(); loadStatus(); if (me.canWrite) runSync(false); }
   // 按鈕：可編輯者＝立即同步（至少間隔 60 秒）；只讀者＝重新載入資料
   function manual() {
     if (me.canWrite) runSync(true);
@@ -163,7 +163,7 @@
         // 先確認身分與連線：失敗就回傳 null，頁面會顯示「目前沒有連上資料庫」
         return fetch(API + 'me', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
           if (!r.ok) return null;
-          return r.json().then(function (j) { me = j; setTimeout(function () { if (document.body) syncOnOpen() }, 300); return db });
+          return r.json().then(function (j) { me = j; meLoaded = true; setTimeout(function () { if (document.body) syncOnOpen() }, 300); return db });
         }).catch(function () { return null });
       }
       if (name === 'user') return Promise.resolve({ can: function (k) { return Promise.resolve(k === 'data.write' ? !!me.canWrite : true) } });
