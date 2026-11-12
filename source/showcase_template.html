@@ -1,4 +1,4 @@
-<title>Today's Quest</title>
+<title>Dino's Big Adventure</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -94,7 +94,7 @@ h+='</div></section>';
 h+='<section class="sec"><h2>身體訊號</h2><div class="chips">';
 [['rhr','靜息心率'],['hrv','HRV']].forEach(function(x){var s=SNAP.body[x[0]];h+='<div class="chip '+s+'"><i></i><span>'+x[1]+'<br>'+LBL[s]+'</span></div>'});
 h+='</div><div class="legend">綠＝在自己設的範圍內　紅＝超出　白＝還沒資料。紅色時角色會流汗。</div></section>';
-h+='<div class="ft"><span>雙半馬冒險路線</span><span>© '+new Date().getFullYear()+' dino.tw</span></div>';
+h+='<div class="ft"><span>Dino's Big Adventure</span><span>© '+new Date().getFullYear()+' dino.tw</span></div>';
 document.getElementById('card').innerHTML=h;
 })();
 </script>
