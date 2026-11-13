@@ -184,6 +184,24 @@ describe('終點拱門規則（前端 archPlan）', () => {
   });
 });
 
+describe('游泳背景（前端 swimScene）', () => {
+  const src = fs.readFileSync(new URL('../source/swimbg.js', import.meta.url), 'utf8');
+  const swimScene = new Function(src + '; return swimScene')();
+  it('泳池與海邊都回傳背景與前景，前景水面從指定的 y 開始', () => {
+    for (const st of ['pool', 'sea']) {
+      const r = swimScene(220, 130, 91, st);
+      expect(r.bg.length).toBeGreaterThan(5); expect(r.fg.length).toBeGreaterThan(3);
+      expect(r.fg.some((q) => q[1] === 91 && q[2] === 220)).toBe(true);
+      expect(r.bg[0][4]).toBe('SKY');
+    }
+  });
+  it('完整版頁面與展示版模板都內含同一份 swimScene', () => {
+    const norm = (x) => x.replace(/\s+/g, '');
+    expect(norm(fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
+    expect(norm(fs.readFileSync(new URL('../source/showcase_template.html', import.meta.url), 'utf8'))).toContain(norm(src.trim()));
+  });
+});
+
 describe('時區', () => {
   const t = new Date('2026-11-07T20:00:00Z');
   it('同一個時間點，不同時區的「今天」不同', () => {
