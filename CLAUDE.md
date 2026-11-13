@@ -31,7 +31,7 @@
 - 階段 0：環境　已完成：兩個 Worker 已部署（adventure、adventure-demo），D1 與 Access 已建立，完整版 Access 驗證通過（2026-11-07）
 - 階段 1：搬頁面與資料庫　線上完整版已顯示資料；本機已驗勾選寫入與只讀；三種動作乘四種身體狀態並排截圖已完成（docs/shots/states_matrix.png，由 scripts/states_matrix.cjs 產生）；待做：線上只讀 email 實測
 - 階段 2：同步 Worker　已依《資料同步功能設計 v0.1》（docs/）實作；單元測試與本機模擬 intervals.icu 驗過（重複執行、搬移、刪除、27 秒略過、錯誤金鑰）；2026-11-07 已用真實 intervals.icu 資料實測（本機 D1，經轉送器）：重複執行 0/0、CP測試實際值與設計文件一致；races/phases 同步屬後續待辦
-- 階段 3：展示版與圖卡　展示版已部署；圖卡本機驗過（1080×1920 PNG、只用顏色、無錯誤，docs/shots/card_sample.png）；待做：圖卡手機實測存相簿、Dino 確認展示版公開範圍
+- 階段 3：展示版與圖卡　展示版已部署；圖卡本機驗過（1080×1920 PNG、只用顏色、無錯誤，docs/shots/card_sample.png）；圖卡手機實測：Dino 在 iPhone 確認圖卡正常顯示（2026-11-13，含泳池背景、字型、版面）；待做：Dino 確認展示版公開範圍
 - 休息圖：已接入（2026-11-07）。等角 2:1 Q 版（泳池、躺椅、遮陽傘），青綠／紫／萊姆三種配色隨機。來源 source/rest_iso/（build_iso.py、iso_rest.json），由 scripts/build_demo.py 產生 public*/rest-art.js。顯示時機：今天沒有課表（類型「休息」不算課表）→ 展示版與今日圖卡改放休息圖；完整版頁面的地圖角色不變。
 - 同步時機（2026-11-08）：排程改為台北 06:00–22:30 每 30 分鐘＋23:00；可編輯者打開頁面／切回 App 時背景同步（冷卻 10 分鐘，POST /api/sync-now）；右下角「↻ 更新於 HH:MM」按鈕＝立即同步（至少間隔 60 秒），只讀者按＝重新載入資料；失敗以紅色狀態列顯示。待查證：Cloudflare Cron 觸發器數量／間隔、免費方案 subrequest 上限、intervals.icu 呼叫頻率限制（沙盒無法連官方文件）。
 - 時區（2026-11-08）：畫面上的時間與「今天」依使用者裝置時區（展示版 /api/snapshot?tz=IANA，無效或沒帶用 APP_TZ，預設 Asia/Taipei；「↻ 更新於」用 Intl 的裝置時區）；伺服器端同步範圍的「今天」用 APP_TZ；排程的 cron 仍是 UTC。
