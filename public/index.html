@@ -137,7 +137,11 @@ details.rg{margin-top:10px;font-size:13px;color:var(--muted)}details.rg summary{
 .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
 .btn.ghost{background:var(--panel)}
 .btn:disabled{opacity:.5;cursor:default}
-form.add{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
+form.add{margin-top:0}
+form.add .addgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:12px}
+details.addd summary{cursor:pointer;color:var(--ink);min-height:44px;line-height:44px;font-family:var(--font-display);font-size:12px}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;line-height:1.2}  /* iPhone：日期框有自己的最小寬度，會超出格子 */
+@media (max-width:440px){form.add .addgrid>label:not(.full){grid-column:1/-1}}  /* 窄螢幕：日期與類型上下排，不重疊 */
 form.add label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
 form.add .full{grid-column:1/-1}
 input[type=text],input[type=date],select,textarea{width:100%;min-width:0;border:3px solid var(--line);background:var(--panel);padding:8px;min-height:44px;color:var(--ink)}
@@ -189,16 +193,20 @@ details.rules p{margin-top:6px}
   </section>
 
   <form class="box add" id="addForm" hidden>
-    <h3 class="full" style="font-family:var(--font-display);font-size:12px">新增課表</h3>
-    <label>日期<input type="date" id="f-date" required></label>
-    <label>類型
-      <select id="f-kind">
-        <option>跑</option><option>騎</option><option>游</option><option>肌力</option><option>休息</option><option>其他</option>
-      </select>
-    </label>
-    <label class="full">課表名稱<input type="text" id="f-title" maxlength="80" placeholder="例如 Z2 有氧 60 分鐘" required></label>
-    <label class="inline full"><input type="checkbox" id="f-key">標為關鍵課表</label>
-    <div class="full"><button class="btn" type="submit">加入這週</button></div>
+    <details class="addd" id="addDet">
+      <summary>新增課表</summary>
+      <div class="addgrid">
+        <label>日期<input type="date" id="f-date" required></label>
+        <label>類型
+          <select id="f-kind">
+            <option>跑</option><option>騎</option><option>游</option><option>肌力</option><option>休息</option><option>其他</option>
+          </select>
+        </label>
+        <label class="full">課表名稱<input type="text" id="f-title" maxlength="80" placeholder="例如 Z2 有氧 60 分鐘" required></label>
+        <label class="inline full"><input type="checkbox" id="f-key">標為關鍵課表</label>
+        <div class="full"><button class="btn" type="submit">加入這週</button></div>
+      </div>
+    </details>
   </form>
 
   <section id="nudge" class="nudge" hidden></section>
@@ -700,7 +708,7 @@ $('addForm').addEventListener('submit',function(e){
     return db.collection('workouts').add(rec).then(function(){
       var wi=Math.floor(diff(START,rec.date)/7);
       if(wi>=0&&wi<NWEEKS){sel={type:'week',id:String(wi)};render()}
-      toast('已加入：'+rec.title);
+      toast('已加入：'+rec.title); $('addDet').open=false;
       return logEvent('workout_added',rec.title,{date:rec.date});
     });
   });
