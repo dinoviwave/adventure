@@ -4,10 +4,11 @@ const out = process.argv[2] || '.';
 const sql = (q) => execSync(`npx wrangler d1 execute adventure --local --command "${q.replace(/"/g, '\\"')}"`, { stdio: 'pipe' });
 const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 const cases = [
-  ['normal', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('n-1','${day(2)}','南山銳2_SAT_跑步Z2','跑',50,0,0,0)`) }, null, 0.1],
-  ['quality', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('q-1','${day(2)}','南山銳2_SAT_節奏跑','跑',50,0,0,0)`) }, null, 0.1],
-  ['race_gold', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('n-1','2026-11-22','南山半馬','跑',120,0,0,0)`); }, '2026-11-22T09:00:00', 0.1],
+  ['normal', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1','d-1','w-1','t-1','t-2')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('n-1','${day(2)}','南山銳2_SAT_跑步Z2','跑',50,0,0,0)`) }, null, 0.1],
+  ['quality', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1','d-1','w-1','t-1','t-2')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('q-1','${day(2)}','南山銳2_SAT_節奏跑','跑',50,0,0,0)`) }, null, 0.1],
+  ['race_gold', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1','d-1','w-1','t-1','t-2')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('n-1','2026-11-22','南山半馬','跑',120,0,0,0)`); }, '2026-11-22T09:00:00', 0.1],
   ['race_royal', () => { }, '2026-11-22T09:00:00', 0.9],
+  ['done', () => { sql("DELETE FROM workouts WHERE id IN ('q-1','n-1','d-1','w-1','t-1','t-2')"); sql(`INSERT INTO workouts (id,date,title,kind,mins,done,key,unplanned) VALUES ('d-1','${day(0)}','南山銳2_THU_節奏跑','跑',45,1,0,0)`) }, null, 0.1],
 ];
 (async () => {
   const b = await chromium.launch(), res = [];

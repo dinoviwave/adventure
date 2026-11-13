@@ -226,6 +226,7 @@ details.rules p{margin-top:6px}
 
 <script src="/db-shim.js"></script>
 <script src="/rest-art.js"></script>
+<script src="/done-art.js"></script>
 <script>
 (function(){
 'use strict';
@@ -861,7 +862,9 @@ function nextWorkout(){var t=today();return workouts.filter(function(w){return !
 function drawCard(D){
   var cv=document.createElement('canvas'); cv.width=1080; cv.height=1920;
   var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.scale(3,3);
-  var RV=(!D.w&&!D.extras.length&&window.REST_ART)?REST_ART.pick():null, SH=RV?56:0; // 沒有課表：場景改放休息圖（場景加高 56，下方留白同量縮減）
+  var RV=null, RPAL=null, SH=0;
+  if(!D.w&&!D.extras.length&&window.REST_ART){ RV=REST_ART.pick(); RPAL=REST_ART.p; SH=56; } // 沒有課表：場景改放休息圖（場景加高 56，下方留白同量縮減）
+  else if(D.w&&D.w.done&&window.DONE_ART){ RV=DONE_ART.pick(); RPAL=DONE_ART.p; }              // 今天的課表完成：場景改放完成圖（高度不變，頂端多餘的紙花會被裁掉）
   var INK='#13203d', MUTED='#46567a', DISP='"Press Start 2P","DotGothic16",monospace', BODY='"DotGothic16","Noto Sans TC","PingFang TC",sans-serif';
   ctx.fillStyle='#f8fbff'; ctx.fillRect(0,0,360,640);
   ctx.textBaseline='alphabetic';
@@ -873,8 +876,8 @@ function drawCard(D){
   function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
   if(RV){
     R(0,0,180,94+SH/2,'#9fd6f2');
-    var rox=Math.round((180-RV.w)/2), roy=Math.round((94+SH/2-RV.h)/2);
-    RV.f[0].forEach(function(r){R(rox+r[1],roy+r[0],r[2],1,'#'+REST_ART.p[r[3]])});
+    var rox=Math.round((180-RV.w)/2), roy=SH?Math.round((94+SH/2-RV.h)/2):(94-RV.h);
+    RV.f[0].forEach(function(r){R(rox+r[1],roy+r[0],r[2],1,'#'+RPAL[r[3]])});
   }else{
   var SWM=D.act==='swim'?((location.hash.match(/swimbg=(\w+)/)||[])[1]||'pool'):null, SC=null, NX=null, AR=null; // 游泳：改用泳池或海邊背景，不畫拱門
   if(SWM){ SC=swimScene(180,94,66,SWM); SC.bg.forEach(function(q){R(q[0],q[1],q[2],q[3],q[4]==='SKY'?'#9fd6f2':q[4])}); }

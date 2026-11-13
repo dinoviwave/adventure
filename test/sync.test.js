@@ -202,6 +202,17 @@ describe('游泳背景（前端 swimScene）', () => {
   });
 });
 
+describe('完成圖與休息圖資料', () => {
+  for (const [name, file] of [['完成圖', '../source/done_iso/iso_done.json'], ['休息圖', '../source/rest_iso/iso_rest.json']]) {
+    it(`${name}：三種配色，色票索引都有效`, () => {
+      const j = JSON.parse(fs.readFileSync(new URL(file, import.meta.url), 'utf8'));
+      const pal = j.p || JSON.parse(fs.readFileSync(new URL('../source/sprite_data.json', import.meta.url), 'utf8')).palette;
+      const names = Object.keys(j.variants); expect(names.length).toBe(3);
+      for (const n of names) { const v = j.variants[n]; expect(v.f[0].length).toBeGreaterThan(50); for (const [y, x, w, c] of v.f[0]) { expect(c).toBeGreaterThanOrEqual(0); expect(c).toBeLessThan(pal.length); expect(x + w).toBeLessThanOrEqual(v.w); expect(y).toBeLessThan(v.h); } }
+    });
+  }
+});
+
 describe('時區', () => {
   const t = new Date('2026-11-07T20:00:00Z');
   it('同一個時間點，不同時區的「今天」不同', () => {
