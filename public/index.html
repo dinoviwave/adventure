@@ -138,6 +138,7 @@ details.rg{margin-top:10px;font-size:13px;color:var(--muted)}details.rg summary{
 .btn.ghost{background:var(--panel)}
 .btn:disabled{opacity:.5;cursor:default}
 form.add{margin-top:0}
+.appfoot{margin:18px 0 96px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}  /* 底端版號；下方留白避免被右下角按鈕蓋住 */
 form.add .addgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:12px}
 details.addd summary{cursor:pointer;color:var(--ink);min-height:44px;line-height:44px;font-family:var(--font-display);font-size:12px}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;max-width:100%;line-height:1.2}  /* iPhone：日期框有自己的最小寬度，會超出格子 */
@@ -218,6 +219,8 @@ details.rules p{margin-top:6px}
     <p>必備項全部確認，鑰匙才齊，關卡才能開啟；建議項只提醒。課表是準備度，不擋人。</p>
     <p>比賽日期與地點依媒體報導整理，起跑時間與賽道路線尚未確認。半馬距離以 21.0975 公里計算配速。</p>
   </details>
+
+  <p class="appfoot" id="appFoot"></p>
 </div>
 <div id="toast" hidden></div>
 

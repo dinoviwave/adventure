@@ -71,15 +71,15 @@
   /* 打開頁面時在背景要求同步（伺服器端有冷卻時間，排程剛跑過就不會重複）。
      結果用頁面右上角的小狀態列顯示：更新中／已更新／同步失敗（失敗會一直顯示，點一下關閉）。 */
   var bar = null, barT = null;
-  function showBar(msg, kind, sticky) {
+  function showBar(msg, kind, sticky, act) {
     try {
       if (!bar) {
         bar = document.createElement('div'); bar.id = 'syncBar';
         bar.style.cssText = 'position:fixed;top:8px;right:8px;z-index:50;max-width:260px;padding:4px 10px;font:13px/1.5 var(--font-body,sans-serif);border:2px solid var(--line,#13203d);background:var(--panel,#f8fbff);color:var(--ink,#13203d);box-shadow:3px 3px 0 var(--line,#13203d);cursor:pointer';
-        bar.addEventListener('click', function () { bar.hidden = true });
+        bar.addEventListener('click', function () { if (bar.dataset.act === 'reload') reloadPage(); else bar.hidden = true });
         document.body.appendChild(bar);
       }
-      bar.hidden = false; bar.textContent = msg;
+      bar.hidden = false; bar.textContent = msg; bar.dataset.act = act || '';
       bar.style.borderColor = kind === 'err' ? '#ee3b3b' : 'var(--line,#13203d)';
       clearTimeout(barT);
       if (!sticky) barT = setTimeout(function () { bar.hidden = true }, 3000);
@@ -96,10 +96,15 @@
   function setBtn(label, line2, title) {
     try {
       if (!btn) {
+        var wrap = document.createElement('div'); wrap.id = 'syncBox';
+        wrap.style.cssText = 'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:6px';
         btn = document.createElement('button'); btn.id = 'syncBtn'; btn.type = 'button';
-        btn.style.cssText = 'position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:50;padding:6px 12px;font:14px/1.3 var(--font-body,sans-serif);border:2px solid var(--line,#13203d);background:var(--panel,#f8fbff);color:var(--ink,#13203d);box-shadow:3px 3px 0 var(--line,#13203d);cursor:pointer;min-height:40px';
+        btn.style.cssText = 'padding:6px 12px;font:14px/1.3 var(--font-body,sans-serif);border:2px solid var(--line,#13203d);background:var(--panel,#f8fbff);color:var(--ink,#13203d);box-shadow:3px 3px 0 var(--line,#13203d);cursor:pointer;min-height:40px';
         btn.addEventListener('click', function () { manual() });
-        document.body.appendChild(btn);
+        var rb = document.createElement('button'); rb.id = 'reloadBtn'; rb.type = 'button'; rb.textContent = '⟳ 重新載入頁面';
+        rb.style.cssText = 'padding:3px 10px;font:12px/1.3 var(--font-body,sans-serif);border:2px solid var(--line,#13203d);background:var(--panel,#f8fbff);color:var(--muted,#46567a);box-shadow:2px 2px 0 var(--line,#13203d);cursor:pointer;min-height:30px';
+        rb.addEventListener('click', function () { reloadPage() });
+        wrap.appendChild(btn); wrap.appendChild(rb); document.body.appendChild(wrap);
       }
       btn.textContent = '';
       btn.appendChild(document.createTextNode(label));
@@ -145,9 +150,33 @@
       showBar('同步失敗：' + (r.error ? String(r.error).replace(/^同步失敗：/, '') : '原因不明') + '（目前顯示上次的資料，點一下關閉）', 'err', true);
     }, function (e) { syncing = false; loadStatus(); showBar((e && e.status === 403 ? '同步失敗：沒有權限，請重新登入' : '同步失敗：連不到伺服器') + '（目前顯示上次的資料，點一下關閉）', 'err', true) });
   }
+  // 重新載入頁面（iPhone 主畫面網頁沒有瀏覽器的重新整理）：整頁重新載入，拿最新的程式
+  function reloadPage() { try { showBar('重新載入中…', 'info', true) } catch (e) {} setTimeout(function () { location.reload() }, 50); }
+  // 新版本偵測：部署時 version.json 的內容會變。頁面載入時記下目前的版本；切回 App 時再看一次，不同就提示重新載入
+  var ver0 = null;
+  function getVer() { return fetch('/version.json', { cache: 'no-store', credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null }).then(function (j) { return j && j.v ? j : null }, function () { return null }); }
+  function checkVersion() {
+    getVer().then(function (j) {
+      if (!j) return;
+      if (!ver0) { ver0 = j.v; return }
+      if (j.v !== ver0) showBar('有新版本，點一下重新載入頁面', 'info', true, 'reload');
+    });
+  }
+  // 底端顯示版號與更新日期（依裝置時區）
+  function fmtBuilt(iso) {
+    try { var tz = Intl.DateTimeFormat().resolvedOptions().timeZone, d = new Date(iso);
+      return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz }).format(d) + ' ' + new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).format(d);
+    } catch (e) { return '' }
+  }
+  function showFoot(j) {
+    try { var el = document.getElementById('appFoot'); if (!el || !j) return;
+      el.textContent = "Dino's Big Adventure　v" + (j.version || '?') + (j.built ? '　更新於 ' + fmtBuilt(j.built) : '') + '　(build ' + String(j.v).slice(0, 6) + ')';
+    } catch (e) { /* 版號顯示失敗不影響頁面 */ }
+  }
+  getVer().then(function (j) { if (j) { ver0 = j.v; showFoot(j) } });
   // 打開、切回 App、從背景回來：自動更新（伺服器端有冷卻，排程剛跑過就不會重複同步）。只有可編輯者能觸發同步
   var lastOpenAt = 0;
-  function syncOnOpen() { if (!meLoaded || Date.now() - lastOpenAt < 2000) return; lastOpenAt = Date.now(); refresh(); loadStatus(); if (me.canWrite) runSync(false); }
+  function syncOnOpen() { checkVersion(); if (!meLoaded || Date.now() - lastOpenAt < 2000) return; lastOpenAt = Date.now(); refresh(); loadStatus(); if (me.canWrite) runSync(false); }
   // 按鈕：可編輯者＝立即同步（至少間隔 60 秒）；只讀者＝重新載入資料
   function manual() {
     if (me.canWrite) runSync(true);

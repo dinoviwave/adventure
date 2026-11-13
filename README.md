@@ -62,3 +62,8 @@ Workers 靜態資源 vs Pages、Access 免費人數上限與 PIN 設定、Cron �
 - 展示版 `quest.dino.tw` 要公開：確認帳號沒有開「Protect all Workers」，也沒有把它納入任何 Access 應用程式。
 - 換網址後登入狀態是依網址分開的，需重新登入一次；iPhone 主畫面要用新網址重新加入。
 - `workers.dev` 網址先保留作為過渡，確認新網址都正常後，再把兩份設定的 `workers_dev` 改成 `false` 關閉。
+
+## 版號與手動更新
+- 版號在 `package.json` 的 `version`；改版（Dino 核可的里程碑）時手動調整。更新日期是部署時間，由 `npm run deploy` 先執行 `scripts/make_version.py` 產生 `public/version.json`。
+- iPhone 主畫面網頁沒有重新整理：右下角「⟳ 重新載入頁面」可整頁重新載入；切回 App 偵測到新版本會自動提示。
+- 單獨用 `wrangler deploy` 會沒有更新 version.json，請一律用 `npm run deploy` 或 `npm run update`。
